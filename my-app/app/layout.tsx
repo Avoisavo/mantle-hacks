@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import '@zkmelabs/widget/dist/style.css';
 
 import { Space_Grotesk } from 'next/font/google'
 
@@ -32,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.variable} ${geistMono.ßvariable} antialiased`}
+        className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>

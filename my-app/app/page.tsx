@@ -13,6 +13,14 @@ import SuccessState from './components/zkme/SuccessState';
 export default function ZkMeSignUp() {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [signer, setSigner] = useState<any>(null);
+
+  const handleConnect = (address: string, signer: any) => {
+    setUserAddress(address);
+    setSigner(signer);
+    setStep(2);
+  };
 
   const nextStep = () => setStep(s => s + 1);
 
@@ -67,13 +75,17 @@ export default function ZkMeSignUp() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
-                  <WalletConnect onConnect={nextStep} />
+                  <WalletConnect onConnect={handleConnect} />
                 </motion.div>
               )}
 
               {step === 2 && (
                 <motion.div key="step2">
-                  <ProofGenerator onComplete={nextStep} />
+                  <ProofGenerator 
+                    onComplete={nextStep} 
+                    userAddress={userAddress}
+                    signer={signer}
+                  />
                 </motion.div>
               )}
 
