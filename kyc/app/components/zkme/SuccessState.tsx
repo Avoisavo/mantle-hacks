@@ -28,7 +28,7 @@ export default function SuccessState() {
 
         <div className="space-y-3">
           <button className="w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#10B981]/90 transition-colors flex items-center justify-center gap-2">
-            Enter Dashboard <ArrowRight size={18} />
+            Enter Room <ArrowRight size={18} />
           </button>
           
           <button className="w-full py-4 bg-white/5 text-white font-medium rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10">

@@ -1,0 +1,114 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/edw/Desktop/mantle-hacks/kyc/contracts/GameStub.sol": {
+      "lastModificationDate": 1766760068435,
+      "contentHash": "1b3605dd6382a4f998e09bd34e01e7d9",
+      "sourceName": "contracts/GameStub.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IIdentity.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.17"
+      ],
+      "artifacts": [
+        "GameStub"
+      ]
+    },
+    "/Users/edw/Desktop/mantle-hacks/kyc/contracts/IIdentity.sol": {
+      "lastModificationDate": 1766760064376,
+      "contentHash": "57816f183b3741f4ceaefb67eb351fa4",
+      "sourceName": "contracts/IIdentity.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.17"
+      ],
+      "artifacts": [
+        "IIdentity"
+      ]
+    },
+    "/Users/edw/Desktop/mantle-hacks/kyc/contracts/MockIdentity.sol": {
+      "lastModificationDate": 1766760066389,
+      "contentHash": "8c2c3a3cf3d7f0ed42bf2a5de9765098",
+      "sourceName": "contracts/MockIdentity.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IIdentity.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.17"
+      ],
+      "artifacts": [
+        "MockIdentity"
+      ]
+    }
+  }
+}
