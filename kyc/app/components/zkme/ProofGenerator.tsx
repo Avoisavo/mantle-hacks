@@ -19,7 +19,7 @@ export default function ProofGenerator({ onComplete, userAddress, signer }: Proo
   const [status, setStatus] = useState<'idle' | 'checking' | 'signing' | 'verifying' | 'success' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [is polling, setIsPolling] = useState(false);
+
 
   // Read config from env
   const KYC_REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_KYC_ADDRESS;
@@ -190,6 +190,16 @@ export default function ProofGenerator({ onComplete, userAddress, signer }: Proo
             >
               <h2 className="text-xl font-bold mb-2 text-yellow-500">Verifying...</h2>
               <p className="text-zinc-400 text-sm mb-2">Relay is submitting your approval.</p>
+            </motion.div>
+          )}
+
+          {status === 'success' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <h2 className="text-2xl font-bold mb-2 text-[#10B981]">Verified!</h2>
+              <p className="text-zinc-500 text-sm mb-3">Redirecting to event room...</p>
               {txHash && (
                 <a
                   href={`https://sepolia.mantlescan.xyz/tx/${txHash}`}
@@ -200,16 +210,6 @@ export default function ProofGenerator({ onComplete, userAddress, signer }: Proo
                   View Transaction <ExternalLink size={10} />
                 </a>
               )}
-            </motion.div>
-          )}
-
-          {status === 'success' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <h2 className="text-2xl font-bold mb-2 text-[#10B981]">Verified!</h2>
-              <p className="text-zinc-500 text-sm">Redirecting to event room...</p>
             </motion.div>
           )}
 
