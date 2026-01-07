@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IIdentity.sol";
 
@@ -14,6 +15,7 @@ import "./IIdentity.sol";
  */
 contract KYCRegistry is IIdentity, Ownable {
     using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
     // The address of your backend/admin wallet that signs attestations
     address public signerAddress;
