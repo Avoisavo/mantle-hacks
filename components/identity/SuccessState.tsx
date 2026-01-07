@@ -1,12 +1,12 @@
-// components/identity/SuccessState.tsx
-"use client";
-
+import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ShieldCheck, ExternalLink, ArrowRight } from 'lucide-react';
 
 export default function SuccessState() {
+  const router = useRouter();
+
   return (
-    <div className="py-8 text-center">
+    <div className="py-8 text-center text-white">
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -27,8 +27,11 @@ export default function SuccessState() {
         </p>
 
         <div className="space-y-3">
-          <button className="w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#10B981]/90 transition-colors flex items-center justify-center gap-2">
-            Enter Room <ArrowRight size={18} />
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#10B981]/90 transition-colors flex items-center justify-center gap-2"
+          >
+            Return to Dashboard <ArrowRight size={18} />
           </button>
           
           <button className="w-full py-4 bg-white/5 text-white font-medium rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10">

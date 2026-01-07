@@ -11,6 +11,7 @@ interface SmartAccountData {
   ownerAddress: string;
   exists: boolean;
   balance?: string;
+  kycStatus?: boolean;
 }
 
 export default function Dashboard() {
@@ -56,6 +57,22 @@ export default function Dashboard() {
 
           const data = await response.json();
           if (data.success) {
+            // Check KYC status for this address
+            let kycVerified = false;
+            try {
+               // We can re-use the checkStatus logic logic or call an API, but for speed let's just assume we check chain or use a specialized API.
+               // For now, let's call our verify API with a "check-only" flag or simply re-use ProofGenerator's logic if we could.
+               // Simpler: let's just add a quick check here using ethers provider if possible, or extend the account creation API to return KYC status.
+               // Let's assume the API returns it or we fetch it separately. 
+               // Actually, let's just do a quick client-side check since we hold the address now.
+               
+               // But wait, we can't easily import ethers here without provider config. 
+               // Let's add a `kyc` boolean to the `SmartAccountData` returned by `api/account/create` in the future.
+               // For this Hackathon step, let's fetch it via a new small ad-hoc call or just use the `api/verify` endpoint if it supported GET?
+               
+               // Let's just create a quick "isVerified" state separate from accountData to be safe.
+            } catch (e) {}
+            
             setAccountData(data.data);
           }
         }
@@ -83,6 +100,66 @@ export default function Dashboard() {
       fetchAccountData();
     }
   }, [session, connectedWallet, status]);
+
+  // Separate effect to check KYC status once we have an address
+  const [isVerified, setIsVerified] = useState(false);
+  useEffect(() => {
+    if (accountData?.accountAddress || connectedWallet) {
+        const checkKYC = async () => {
+             const target = accountData?.accountAddress || connectedWallet;
+             // We can use a public provider here to check the contract quickly
+             // Implementation details: importing ethers and checking contract
+             // For brevity/cleanliness, let's just assume we can fetch it or trust local state if we just came back from verification.
+             // Actually, simplest way:
+             try {
+                // We will use a quick JSON-RPC call directly to allow client-side check without heavy imports
+                const KYC_ADDRESS = "0x8faA61d0C635392D09A67C41C54C9191D55E0E4c"; // Hardcoded or env
+                // ... Actually, better to use the same logic as ProofGenerator but we are in a page.
+                
+                // Let's rely on a small helper or just assume unverified -> verified transition happens if we have a query param? 
+                // No, user requested "show that they are verified".
+                
+                // Let's add a lightweight check.
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        // Hacky: we use the verify endpoint to "check" by sending a dummy check payload?
+                        // No, verify endpoint is for writing.
+                        
+                        // Let's add a simple check.
+                    })
+                });
+             } catch(e) {}
+        }
+        // checkKYC();
+    }
+  }, [accountData, connectedWallet]);
+
+  // REAL IMPLEMENTATION: We'll modify the UI to conditionally show the badge based on a new state `isVerified`.
+  // To populate `isVerified`, we really need that contract check. 
+  // I will add a `useEffect` that uses `ethers` (dynamically imported or from standard lib) to check `hasPassed`.
+  
+  useEffect(() => {
+      const checkVerification = async () => {
+          const targetAddress = accountData?.accountAddress || connectedWallet;
+          if (!targetAddress) return;
+          
+          try {
+             const { JsonRpcProvider, Contract } = await import('ethers');
+             const provider = new JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+             const abi = ["function hasPassed(address user) external view returns (bool)"];
+             // NOTE: Use environment variable in real app
+             const contract = new Contract(process.env.NEXT_PUBLIC_KYC_ADDRESS || "", abi, provider);
+             const passed = await contract.hasPassed(targetAddress);
+             setIsVerified(passed);
+          } catch (e) {
+              console.error("KYC Check failed", e);
+          }
+      };
+      
+      checkVerification();
+  }, [accountData, connectedWallet]);
 
   if (status === "loading" || loading) {
     return (
@@ -234,6 +311,19 @@ export default function Dashboard() {
             <button className="px-6 py-3 bg-white/10 backdrop-blur border border-purple-400/50 rounded-full text-white font-semibold hover:bg-white/20 transition-all">
               View on Explorer
             </button>
+            {isVerified ? (
+                <div className="px-6 py-3 bg-[#10B981]/20 border border-[#10B981] rounded-full text-[#10B981] font-semibold flex items-center gap-2 cursor-default">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                  Verified Identity
+                </div>
+            ) : (
+                <button 
+                  onClick={() => router.push('/identity')}
+                  className="px-6 py-3 bg-[#10B981] rounded-full text-black font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+                >
+                  Verify Identity
+                </button>
+            )}
           </motion.div>
 
           {/* Info Box */}
