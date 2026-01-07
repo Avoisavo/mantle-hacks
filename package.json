@@ -9,22 +9,42 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@alchemy/aa-accounts": "^3.19.0",
+    "@alchemy/aa-alchemy": "^3.19.0",
+    "@alchemy/aa-core": "^3.19.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@tanstack/react-query": "^5.90.16",
     "@types/three": "^0.182.0",
+    "framer-motion": "^12.24.10",
     "next": "16.1.1",
+    "next-auth": "^4.24.13",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "viem": "^2.43.5",
+    "wagmi": "^3.2.0"
   },
   "devDependencies": {
+    "@account-abstraction/contracts": "^0.8.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
     "@tailwindcss/postcss": "^4",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chai": "^6.2.2",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.1.2",
+    "solc": "^0.8.19",
     "tailwindcss": "^4",
+    "typechain": "^8.3.2",
     "typescript": "^5"
   }
 }
