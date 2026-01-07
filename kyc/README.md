@@ -1,55 +1,90 @@
-Here is the professional re-explanation and justification for your **"Simulated Sovereign Gate"** strategy.
+# Mantle KYC Registry (Hackathon MVP)
 
-You can copy-paste sections of this directly into your **Devpost submission**, **README.md**, or use it as a script for your **Demo Video**.
+This module implements a **Privacy-First, Gas-Optimized KYC Registry** on the Mantle Network. 
+It is designed specifically to support **zkLogin (Gasless)** users while offering a standard robust flow for **MetaMask** users.
 
----
+## 🚀 Key Features
 
-### **The Project Name for this Module**
-
-**"VITA Sovereign Identity Module (Simulated)"**
-
-### **1. The Explanation (What did you build?)**
-
-> "For the Mantle Hackathon, VITA implements a **Provider-Agnostic Identity Architecture**. We have designed the system to fully comply with **zkMe’s Zero-Knowledge KYC standards**, utilizing Soulbound Tokens (SBTs) to gate access to RWA rooms.
-> However, to ensure a seamless testing experience for judges, we have deployed a **Simulation Module** for the hackathon demonstration. This module mimics the exact on-chain behavior of a zk-Identity provider (minting a verification token to the user's wallet) without requiring judges to perform a live biometric face scan or upload real government ID documents."
+1.  **Dual-Flow Verification**:
+    *   **Admin Push (Gasless)**: The backend pays the gas to verify the user. Perfect for fresh zkLogin wallets with 0 MANTLE.
+    *   **User Pull (Signature)**: The user pays gas to submit a backend-signed "Verify Me" pass.
+2.  **No PII On-Chain**: We only store `address -> bool (isVerified)`. No names, IPs, or documents.
+3.  **MVP Friendly**: Designed to work with "Mock" verification (e.g., just clicking a button in Dev Mode) or real providers (Sumsub) without code changes.
 
 ---
 
-### **2. The Justification (Why is this a feature, not a bug?)**
+## 🛠 Contract Architecture
 
-When judges ask (or read) why you are using a mock, you present these four strategic reasons. This turns a "missing feature" into a "thoughtful design decision."
+### `KYCRegistry.sol`
+The core contract that acts as the gatekeeper.
 
-#### **A. Judge Accessibility (UX First)**
-
-* **The Problem:** Real zk-KYC requires users to scan their face and upload a passport.
-* **Your Solution:** "We value the judges' time and privacy. By mocking the verification layer, we allow anyone to test the full *GameFi* and *RWA* mechanics instantly, removing the friction of a 5-minute KYC onboarding process just to play a demo."
-
-#### **B. Operational Stability**
-
-* **The Problem:** Relying on external APIs (like zkMe’s testnet environment) introduces latency and potential downtime risks during the crucial judging period (Feb 1).
-* **Your Solution:** "Our simulation module guarantees 100% uptime for the demo. By decoupling the game logic from the external API, we ensure that the judging experience is never blocked by third-party service interruptions or API rate limits."
-
-#### **C. Privacy-First Prototyping**
-
-* **The Problem:** Handling real biometric data during a hackathon raises significant data compliance/GDPR issues.
-* **Your Solution:** "As a responsible RWA project, we chose not to process live Personally Identifiable Information (PII) during the prototype phase. The Mock Module allows us to demonstrate compliance logic on-chain without exposing user data unnecessarily."
-
-#### **D. Modular Architecture (Technical Competence)**
-
-* **The Proof:** "This decision proves our architectural maturity. We built the Game Controller using a standard `IIdentity` interface. This means VITA is **plug-and-play ready**. Switching from this 'Mock Module' to the 'Live zkMe Mainnet' requires changing only **one line of code** (the contract address) in our deployment script. The logic remains identical."
+*   **`signerAddress`**: The address of your backend wallet. Only this address can authorize verifications.
+*   **`setApproved(address user, bool status)`**: 
+    *   *Callable by:* Admin/Backend only.
+    *   *Cost:* Paid by Backend.
+    *   *Use Case:* **zkLogin** users who cannot pay gas yet.
+*   **`verifyMe(uint256 deadline, bytes signature)`**:
+    *   *Callable by:* User.
+    *   *Cost:* Paid by User.
+    *   *Security:* Uses EIP-712 style hash protection (User + Deadline + ChainID + ContractAddress) to prevent replay attacks.
+    *   *Use Case:* Users who already have MANTLE or prefer self-custody flows.
 
 ---
 
-### **3. How to Present it in the Demo Video**
+## 🔄 User Flows
 
-* **Visual:** Show the user clicking "Verify Identity."
-* **Action:** Show a cool loading animation (e.g., "Verifying Zero-Knowledge Proof...").
-* **Result:** Show the game unlocking.
-* **Voiceover Script:**
-> *"To ensure compliance for Real World Assets, VITA requires Identity Verification. For this hackathon demo, we are simulating the zkMe verification flow. This allows us to demonstrate the 'Sovereign Gate' mechanics without asking you to scan your real passport today. As you can see, once the simulated proof is verified on-chain, the RWA Vault unlocks automatically."*
+### Flow A: zkLogin / Gasless (Recommended)
+*Ideal for onboarding web2 users who don't have crypto yet.*
 
+1.  **User Logs in**: Uses zkLogin (Google/Apple).
+2.  **User Requests KYC**: Clicks "Verify ID" on the frontend.
+3.  **Backend Verification**:
+    *   Server checks criteria (Mock or Real).
+    *   **Server Transaction**: The backend calls `KYCRegistry.setApproved(userAddress, true)`.
+4.  **Result**: User is verified on-chain without signing a generic transaction or paying gas.
 
+### Flow B: Standard Wallet (MetaMask)
+*Ideal for crypto-native users.*
 
-### **Summary**
+1.  **User Logs in**: Connects MetaMask.
+2.  **User Requests KYC**: Clicks "Verify ID".
+3.  **Backend Verification**:
+    *   Server checks criteria.
+    *   **Server Signing**: The backend signs a message: `Sign(UserAddress + Deadline + ChainID)`.
+    *   **Response**: Backend sends this `signature` back to the frontend.
+4.  **User Action**: Frontend prompts user to sign the specific `verifyMe` transaction.
+5.  **Result**: User pays gas, submits signature, and becomes verified.
 
-You are not "skipping" KYC. You are **"Simulating the Verification Layer for Testing Efficiency."** This is a standard, professional software development practice.
+---
+
+## 📦 How to Deploy & Use
+
+### 1. Setup
+Ensure dependencies are installed:
+```bash
+npm install
+```
+
+### 2. Configure Environment
+Create a `.env` file in the `kyc` folder (if deploying to real testnet):
+```env
+PRIVATE_KEY=your_backend_wallet_private_key
+MANTLE_SEPOLIA_RPC=https://rpc.sepolia.mantle.xyz
+```
+
+### 3. Deploy
+Deploy the registry to Mantle Sepolia:
+```bash
+npx hardhat run scripts/deploy.js --network mantle-sepolia
+```
+*   Copy the **Deployed Address** to your frontend config.
+*   Ensure your backend uses the **Same Private Key** that deployed the contract (or call `setSigner` to rotate it).
+
+### 4. Verify It Works (Test Script)
+We have included a comprehensive test script that runs through both flows locally.
+```bash
+npx hardhat run scripts/test_kyc.js
+```
+*   **Success Criteria**: The script should print "SUCCESS" for both the Signature Flow and the Direct Approval Flow, and catch the Malicious Replay attempt.
+
+---
