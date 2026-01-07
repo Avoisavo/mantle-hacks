@@ -6,5 +6,3 @@ export const MOCK_IDENTITY_ABI = [
 
 // Placeholder address - User will need to update this after deployment
 export const MOCK_IDENTITY_ADDRESS = "0xa073698Bfb9dC164e3d5D8AE2Da5286367d360E8"; 
-
-//export const MOCK_IDENTITY_ADDRESS = "0x0000000000000000000000000000000000000000"; 

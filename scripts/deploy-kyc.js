@@ -13,9 +13,6 @@ async function main() {
 
   console.log("KYCRegistry deployed to:", address);
   console.log("Owner/Signer set to:", deployer.address);
-
-  console.log("\nMake sure to set this address in your .env file as NEXT_PUBLIC_KYC_ADDRESS");
-  console.log("And ensure RELAY_PRIVATE_KEY matches the deployer address!");
 }
 
 main().catch((error) => {
