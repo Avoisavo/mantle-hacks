@@ -36,10 +36,10 @@ The **Proof Generator** is the core of your identity verification flow. Here i
 
 ### 1. It is "Sovereign" KYC
 
-In traditional KYC, you send your passport/ID directly to a company, and they store it in their database. Here, the "Proof Generator" implies that you are using a **Zero-Knowledge** approach (like zkMe).
+In traditional KYC, you send your passport/ID directly to a company, and they store it in their database. Here, the "Proof Generator" implies that you are using a **Self-Sovereign Identity** approach.
 
 - **The User**: Keeps their data.
-- **The App**: Only receives a mathematical "Proof" (or a signed attestation) that the user is real and verified.
+- **The App**: Only receives a signed attestation (the "Proof") that the user is real and verified.
 
 ### 2. On-Chain Verification
 

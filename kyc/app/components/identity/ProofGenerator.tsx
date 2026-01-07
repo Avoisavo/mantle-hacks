@@ -28,36 +28,49 @@ export default function ProofGenerator({ onComplete, userAddress, signer }: Proo
     if (!userAddress || !signer || !KYC_REGISTRY_ADDRESS) return false;
 
     try {
-      // Use the signer (which is connected to a provider) or fall back to a public RPC if needed?
-      // Since we mocked the wallet with a provider, signer has a provider.
-      const contract = new Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, signer);
-      const isVerified = await contract.isVerified(userAddress);
+      // 1. Network Check
+      const network = await signer.provider.getNetwork();
+      if (Number(network.chainId) !== MANTLE_SEPOLIA_CHAIN_ID) {
+        setError("Please switch your wallet to Mantle Sepolia network.");
+        return false;
+      }
 
+      const contract = new Contract(KYC_REGISTRY_ADDRESS, [
+        "function hasPassed(address user) external view returns (bool)"
+      ], signer);
+      
+      const isVerified = await contract.hasPassed(userAddress);
       console.log(`Checking status for ${userAddress}: ${isVerified}`);
 
       if (isVerified) {
         setStatus('success');
-        // Wait a bit just to show the success state before moving on
         setTimeout(() => onComplete(), 2000);
         return true;
       }
       return false;
     } catch (err) {
       console.error("Failed to check status", err);
-      // Don't error out hard, just return false
       return false;
     }
   }, [userAddress, signer, KYC_REGISTRY_ADDRESS, onComplete]);
 
-  // Initial check on mount
+  // Initial check on mount only
   useEffect(() => {
-    if (status === 'idle') {
+    let active = true;
+    
+    const runInitialCheck = async () => {
       setStatus('checking');
-      checkStatus().then((verified) => {
-        if (!verified) setStatus('idle');
-      });
-    }
-  }, [checkStatus, status]);
+      const verified = await checkStatus();
+      if (active && !verified) {
+        setStatus('idle');
+      }
+    };
+
+    runInitialCheck();
+    
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAddress]); // Only re-run if the user address changes
 
   // Polling Effect
   useEffect(() => {

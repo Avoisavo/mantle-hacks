@@ -1,4 +1,4 @@
-// components/zkme/SuccessState.tsx
+// components/identity/SuccessState.tsx
 "use client";
 
 import { motion } from 'framer-motion';
@@ -23,7 +23,7 @@ export default function SuccessState() {
       >
         <h2 className="text-3xl font-bold mb-2">Registration Complete</h2>
         <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
-          Your identity has been verified and your zkMe profile is now active on the Mantle Network.
+          Your identity has been verified and your status is now active on the Mantle Network.
         </p>
 
         <div className="space-y-3">
@@ -39,7 +39,7 @@ export default function SuccessState() {
         <div className="mt-12 pt-8 border-t border-white/5">
           <div className="flex items-center justify-center gap-2 text-zinc-500 text-sm">
             <ShieldCheck size={16} />
-            <span>Secured by Zero-Knowledge Proofs</span>
+            <span>Verified on Mantle Network</span>
           </div>
         </div>
       </motion.div>
