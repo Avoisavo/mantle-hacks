@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Cpu, Wallet, CheckCircle2, ChevronRight, Lock } from 'lucide-react';
 
 // Components
-import WalletConnect from './components/zkme/WalletConnect';
-import ProofGenerator from './components/zkme/ProofGenerator';
-import SuccessState from './components/zkme/SuccessState';
+import WalletConnect from './components/identity/WalletConnect';
+import ProofGenerator from './components/identity/ProofGenerator';
+import SuccessState from './components/identity/SuccessState';
 
-export default function ZkMeSignUp() {
+export default function IdentitySignUp() {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -38,13 +38,13 @@ export default function ZkMeSignUp() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#10B981]/30 bg-[#10B981]/5 text-[#10B981] text-xs font-mono mb-4"
           >
             <Lock size={12} />
-            ZERO KNOWLEDGE IDENTITY PROTOCOL
+            MANTLE IDENTITY VERIFICATION
           </motion.div>
           <h1 className="text-5xl font-bold tracking-tighter font-space italic">
-            zk<span className="text-[#10B981]">Me</span> Registration
+            Mantle<span className="text-[#10B981]">ID</span> Registration
           </h1>
           <p className="mt-4 text-zinc-500 max-w-md mx-auto">
-            Verify your identity globally without ever sharing a single piece of raw personal data.
+            Securely verify your identity on Mantle using our gasless registration protocol.
           </p>
         </header>
 
