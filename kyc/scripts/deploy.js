@@ -1,19 +1,24 @@
-import hre from "hardhat";
+const hre = require("hardhat");
 
 async function main() {
-  console.log("Deploying MockIdentity...");
+  const [deployer] = await hre.ethers.getSigners();
 
-  const MockIdentity = await hre.ethers.getContractFactory("MockIdentity");
-  const mockIdentity = await MockIdentity.deploy();
+  console.log("Deploying contracts with the account:", deployer.address);
 
-  await mockIdentity.waitForDeployment();
+  // We want the deployer to be the initial signer/owner
+  // Ideally 'deployer' is the wallet from RELAY_PRIVATE_KEY
+  const KYCRegistry = await hre.ethers.getContractFactory("KYCRegistry");
+  const kyc = await KYCRegistry.deploy(deployer.address);
 
-  const address = await mockIdentity.getAddress();
-  console.log(`MockIdentity deployed to: ${address}`);
-  
-  console.log("----------------------------------------------------");
-  console.log("Make sure to update 'lib/abis.ts' with this address!");
-  console.log("----------------------------------------------------");
+  await kyc.waitForDeployment();
+  const address = await kyc.getAddress();
+
+  console.log("KYCRegistry deployed to:", address);
+  console.log("Owner/Signer set to:", deployer.address);
+
+  // Verification hint
+  console.log("\nMake sure to set this address in your .env file as NEXT_PUBLIC_KYC_ADDRESS");
+  console.log("And ensure RELAY_PRIVATE_KEY matches the deployer address!");
 }
 
 main().catch((error) => {

@@ -24,11 +24,11 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
     try {
       setIsConnecting(true);
       setError(null);
-      
+
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const accounts = await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
-      
+
       if (accounts[0]) {
         onConnect(accounts[0], signer);
       }
@@ -42,11 +42,10 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
 
   return (
     <div className="space-y-6">
-      <div 
+      <div
         onClick={connectWallet}
-        className={`p-6 rounded-xl bg-white/5 border transition-all cursor-pointer group ${
-          error ? 'border-red-500/50' : 'border-white/10 hover:border-[#10B981]/50'
-        }`}
+        className={`p-6 rounded-xl bg-white/5 border transition-all cursor-pointer group ${error ? 'border-red-500/50' : 'border-white/10 hover:border-[#10B981]/50'
+          }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -63,13 +62,37 @@ export default function WalletConnect({ onConnect }: WalletConnectProps) {
           <ChevronRight className="text-zinc-600" />
         </div>
       </div>
-      
-      <button 
+
+      <button
         onClick={connectWallet}
         disabled={isConnecting}
         className="w-full py-4 bg-[#F5F5F5] text-black font-bold rounded-xl hover:bg-[#10B981] disabled:bg-zinc-800 disabled:text-zinc-500 transition-colors flex items-center justify-center gap-2"
       >
         {isConnecting ? 'Connecting Wallet...' : 'Initialize zkMe'} <ChevronRight size={18} />
+      </button>
+
+      {/* MOCK WALLET OPTION for Hackathon/Testing */}
+      <div className="relative flex py-2 items-center">
+        <div className="flex-grow border-t border-gray-700"></div>
+        <span className="flex-shrink-0 mx-4 text-gray-500 text-xs">Test Options</span>
+        <div className="flex-grow border-t border-gray-700"></div>
+      </div>
+
+      <button
+        onClick={() => {
+          const mockWallet = ethers.Wallet.createRandom();
+          // Create a simple provider-less signer, or mock the provider if needed. 
+          // For signing messages, a wallet with no provider is fine. 
+          // But we need a provider to read the contract later.
+          // We can attach a provider (Mantle Sepolia RPC)
+          const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+          const connectedWallet = mockWallet.connect(provider);
+
+          onConnect(mockWallet.address, connectedWallet);
+        }}
+        className="w-full py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 text-sm"
+      >
+        Simulate zk-Login (Mock Wallet)
       </button>
     </div>
   );
