@@ -46,11 +46,17 @@ export default function IdentityPage() {
     }
   }, [isConnected, step, session]);
 
+  const [verificationTxHash, setVerificationTxHash] = useState<string | undefined>();
+
   const activeAddress = smartAccountAddress || address || '';
 
-  const nextStep = () => setStep(3);
+  const handleComplete = (hash?: string) => {
+    setVerificationTxHash(hash);
+    setStep(3);
+  };
 
   return (
+    <>
     <main className="min-h-screen bg-[#050505] text-[#F5F5F5] selection:bg-[#10B981]/30 selection:text-[#10B981]">
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
@@ -112,7 +118,7 @@ export default function IdentityPage() {
                 <motion.div key="step2">
                   {/* We pass the connected address. Signer is handled internally via hooks or passed if available */}
                   <ProofGenerator 
-                    onComplete={nextStep} 
+                    onComplete={handleComplete} 
                     userAddress={activeAddress}
                     signer={null} 
                     isSmartAccount={!!smartAccountAddress}
@@ -122,13 +128,15 @@ export default function IdentityPage() {
 
               {step === 3 && (
                 <motion.div key="step3">
-                  <SuccessState />
+                  <SuccessState txHash={verificationTxHash} />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
       </div>
-    </main>
+
+      </main>
+    </>
   );
 }

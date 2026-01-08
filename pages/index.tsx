@@ -124,6 +124,7 @@ export default function Home() {
             animation: grid 20s ease-in-out infinite alternate;
           }
         `}</style>
+        
       </main>
     </>
   );

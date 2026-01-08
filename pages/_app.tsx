@@ -12,7 +12,10 @@ import { useState } from "react";
 
 const queryClient = new QueryClient();
 
+// ... existing imports ...
+
 export default function App({ Component, pageProps }: AppProps) {
+  
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
