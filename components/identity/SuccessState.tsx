@@ -2,7 +2,11 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ShieldCheck, ExternalLink, ArrowRight } from 'lucide-react';
 
-export default function SuccessState() {
+interface SuccessStateProps {
+  txHash?: string;
+}
+
+export default function SuccessState({ txHash }: SuccessStateProps) {
   const router = useRouter();
 
   return (
@@ -34,9 +38,16 @@ export default function SuccessState() {
             Return to Dashboard <ArrowRight size={18} />
           </button>
           
-          <button className="w-full py-4 bg-white/5 text-white font-medium rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10">
-            View on Explorer <ExternalLink size={16} />
-          </button>
+          {txHash && (
+            <a 
+              href={`https://sepolia.mantlescan.xyz/tx/${txHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full py-4 bg-white/5 text-white font-medium rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2 border border-white/10"
+            >
+              View on Explorer <ExternalLink size={16} />
+            </a>
+          )}
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/5">

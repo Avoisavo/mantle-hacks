@@ -57,22 +57,6 @@ export default function Dashboard() {
 
           const data = await response.json();
           if (data.success) {
-            // Check KYC status for this address
-            let kycVerified = false;
-            try {
-               // We can re-use the checkStatus logic logic or call an API, but for speed let's just assume we check chain or use a specialized API.
-               // For now, let's call our verify API with a "check-only" flag or simply re-use ProofGenerator's logic if we could.
-               // Simpler: let's just add a quick check here using ethers provider if possible, or extend the account creation API to return KYC status.
-               // Let's assume the API returns it or we fetch it separately. 
-               // Actually, let's just do a quick client-side check since we hold the address now.
-               
-               // But wait, we can't easily import ethers here without provider config. 
-               // Let's add a `kyc` boolean to the `SmartAccountData` returned by `api/account/create` in the future.
-               // For this Hackathon step, let's fetch it via a new small ad-hoc call or just use the `api/verify` endpoint if it supported GET?
-               
-               // Let's just create a quick "isVerified" state separate from accountData to be safe.
-            } catch (e) {}
-            
             setAccountData(data.data);
           }
         }
@@ -308,9 +292,17 @@ export default function Dashboard() {
             <button className="px-6 py-3 bg-white/10 backdrop-blur border border-pink-400/50 rounded-full text-white font-semibold hover:bg-white/20 transition-all">
               Send Transaction
             </button>
-            <button className="px-6 py-3 bg-white/10 backdrop-blur border border-purple-400/50 rounded-full text-white font-semibold hover:bg-white/20 transition-all">
-              View on Explorer
-            </button>
+            {/* Only show explorer button if we have a reason to (e.g. account deployed or recent tx) */}
+            {accountData?.exists && (
+              <a 
+                href={`https://sepolia.mantlescan.xyz/address/${accountData.accountAddress}`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-3 bg-white/10 backdrop-blur border border-purple-400/50 rounded-full text-white font-semibold hover:bg-white/20 transition-all flex items-center gap-2"
+              >
+                View Account on Explorer
+              </a>
+            )}
             {isVerified ? (
                 <div className="px-6 py-3 bg-[#10B981]/20 border border-[#10B981] rounded-full text-[#10B981] font-semibold flex items-center gap-2 cursor-default">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
