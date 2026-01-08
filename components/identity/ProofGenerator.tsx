@@ -14,7 +14,7 @@ interface ProofGeneratorProps {
 const MANTLE_SEPOLIA_CHAIN_ID = 5003;
 
 export default function ProofGenerator({ onComplete, userAddress, isSmartAccount }: ProofGeneratorProps) {
-  const [status, setStatus] = useState<'idle' | 'face_prep' | 'face_scan' | 'id_prep' | 'id_scan' | 'checking' | 'signing' | 'verifying' | 'success' | 'failed'>('idle');
+  const [status, setStatus] = useState<'idle' | 'face_prep' | 'face_scan' | 'id_prep' | 'id_scan' | 'id_confirm' | 'checking' | 'signing' | 'verifying' | 'success' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const { signMessageAsync } = useSignMessage();
@@ -133,7 +133,10 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
         if (progress >= 100) {
           clearInterval(timer);
           stopCamera();
-          setTimeout(() => handleVerify(), 500);
+          setTimeout(() => {
+            setStatus('id_confirm');
+            setScanProgress(0);
+          }, 500);
         }
       }, 100);
       return () => clearInterval(timer);
@@ -174,7 +177,15 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
                     ? (status.includes('id') ? 'w-full aspect-[1.586/1] scale-100' : 'w-full aspect-square scale-100')
                     : (status === 'id_prep' ? 'w-64 aspect-[1.586/1] scale-95 opacity-50' : 'w-48 aspect-square scale-95 opacity-50')
             }`}>
-                 <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" /> 
+                 <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    className={`w-full h-full object-cover transition-transform duration-700 ${
+                        (status === 'face_scan' || status === 'face_prep') ? 'transform scale-x-[-1]' : ''
+                    }`} 
+                 /> 
                 {(status === 'face_scan' || status === 'id_scan') && (
                     <div className="absolute inset-0 bg-[#10B981]/10 z-30">
                         <motion.div initial={{ top: "0%" }} animate={{ top: "100%" }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute left-0 right-0 h-[3px] bg-[#10B981] shadow-[0_0_20px_#10B981]" />
@@ -186,6 +197,8 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
                     <span className="text-[10px] uppercase tracking-widest font-bold">{status.replace('_', ' ')}</span>
                 </div>
             </div>
+        ) : status === 'id_confirm' ? (
+            <div className="h-0" /> /* Shrink the icon area to make room for form */
         ) : (
             <div className="w-32 h-32 mx-auto flex items-center justify-center bg-black/50 rounded-full backdrop-blur-sm z-10 border border-white/10 relative">
                 <AnimatePresence mode="wait">
@@ -199,7 +212,7 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
         )}
       </div>
 
-      <div className="h-40 px-4 flex flex-col items-center justify-center">
+      <div className={`${status === 'id_confirm' ? 'h-auto' : 'h-40'} px-4 flex flex-col items-center justify-center`}>
         <AnimatePresence mode="wait">
           {(status === 'idle' || status === 'checking') && (
             <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -246,6 +259,37 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
                       <motion.div className="h-full bg-blue-500 shadow-[0_0_10px_#3b82f6]" animate={{ width: `${scanProgress}%` }} />
                   </div>
               </motion.div>
+          )}
+
+          {status === 'id_confirm' && (
+            <motion.div key="id_confirm" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-blue-400 font-space italic">Confirm extracted info</h2>
+                    <p className="text-zinc-500 text-sm mt-1">Please verify that the OCR correctly read your document.</p>
+                </div>
+                
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 text-left">
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Full Name</label>
+                        <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5">Alice Smith</p>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Identity Number</label>
+                        <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5 font-mono">MNT-742-998</p>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Residential Address</label>
+                        <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5 text-sm leading-relaxed">123 Mantle Way, Sepolia District</p>
+                    </div>
+                </div>
+
+                <button 
+                  onClick={handleVerify}
+                  className="w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all transform active:scale-[0.98]"
+                >
+                  Verify & Sign Protocol
+                </button>
+            </motion.div>
           )}
 
           {status === 'signing' && <motion.div key="signing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}><h2 className="text-xl font-bold mb-2 text-blue-400">Sign Request</h2><p className="text-zinc-400 text-sm">Please sign the message in your wallet to prove ownership.</p></motion.div>}
