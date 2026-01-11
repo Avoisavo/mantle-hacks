@@ -15,11 +15,19 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    sepolia: {
+      type: "http",
+      url: "https://rpc.sepolia.org",
+      chainId: 11155111,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY
+        ? [process.env.DEPLOYER_PRIVATE_KEY, process.env.RELAY_PRIVATE_KEY].filter((k): k is string => !!k)
+        : [],
+    },
     mantleSepolia: {
       type: "http",
       url: process.env.MANTLE_RPC_URL || "https://rpc.sepolia.mantle.xyz",
       chainId: 5003,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY 
+      accounts: process.env.DEPLOYER_PRIVATE_KEY
         ? [process.env.DEPLOYER_PRIVATE_KEY, process.env.RELAY_PRIVATE_KEY].filter((k): k is string => !!k)
         : [],
     },

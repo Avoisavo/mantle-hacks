@@ -95,7 +95,7 @@ contract TownTopUp {
         owner = msg.sender;
 
         // Deploy token and set this contract as minter
-        TownToken _town = new TownToken(msg.sender);
+        TownToken _town = new TownToken(address(this));
         town = _town;
         _town.setMinter(address(this), true);
     }
