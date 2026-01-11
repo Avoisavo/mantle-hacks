@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '@/lib/game/types';
-import { Trophy, Crown, Signal } from 'lucide-react';
+import { Trophy, Crown, Signal, LogOut, ChevronDown } from 'lucide-react';
 import { AvatarIcon } from './AvatarIcon';
+import { useSession, signOut } from 'next-auth/react';
+import { useAccount, useDisconnect } from 'wagmi';
+import { useRouter } from 'next/navigation';
 
 interface TournamentRibbonProps {
     players: Player[];
@@ -10,9 +13,51 @@ interface TournamentRibbonProps {
 }
 
 export const TournamentRibbon: React.FC<TournamentRibbonProps> = ({ players, currentPlayerIndex, prizePot }) => {
+    const [showAccountMenu, setShowAccountMenu] = useState(false);
+    const { data: session } = useSession();
+    const { address: connectedWallet, disconnect } = useAccount();
+    const router = useRouter();
+    const accountMenuRef = useRef<HTMLDivElement>(null);
+
     const maxBalance = Math.max(...players.map(p => p.balance));
     const sortedBots = players.filter(p => p.id !== '1').sort((a, b) => b.balance - a.balance);
     const human = players.find(p => p.id === '1');
+
+    // Get account display info
+    const displayName = session?.user?.name || connectedWallet?.slice(0, 6) + "..." + connectedWallet?.slice(-4);
+    const displayImage = session?.user?.image;
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+                setShowAccountMenu(false);
+            }
+        };
+
+        if (showAccountMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showAccountMenu]);
+
+    const handleLogout = async () => {
+        try {
+            if (session) {
+                await signOut({ redirect: false });
+            }
+            if (connectedWallet) {
+                await disconnect();
+            }
+            setShowAccountMenu(false);
+            router.push('/');
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
 
     return (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 pointer-events-none">
@@ -20,26 +65,63 @@ export const TournamentRibbon: React.FC<TournamentRibbonProps> = ({ players, cur
             {/* 1. THE UNIFIED COMMAND BAR */}
             <div className="relative w-full h-20 bg-[#0F172A]/80 backdrop-blur-xl rounded-[24px] border border-white/10 shadow-2xl flex items-center justify-between px-2 md:px-6 pointer-events-auto overflow-visible ring-1 ring-white/5">
 
-                {/* LEFT WING: COMMANDER CARD */}
-                <div className="flex items-center gap-4 h-full py-2">
-                    {human && (
-                        <div className="flex items-center gap-3 bg-[#1E293B]/50 pr-6 rounded-[18px] border border-white/5 h-full group hover:bg-[#1E293B] transition-colors cursor-pointer">
+                {/* LEFT WING: ACCOUNT CARD */}
+                <div className="flex items-center gap-4 h-full py-2 relative">
+                    <div className="relative" ref={accountMenuRef}>
+                        <div
+                            className="flex items-center gap-3 bg-[#1E293B]/50 pr-4 rounded-[18px] border border-white/5 h-full group hover:bg-[#1E293B] transition-colors cursor-pointer"
+                            onClick={() => setShowAccountMenu(!showAccountMenu)}
+                        >
+                            {/* Profile Image or Avatar */}
                             <div className="relative h-full aspect-square p-1">
-                                <div className={`w-full h-full rounded-[14px] flex items-center justify-center border-[2px] ${human.balance === maxBalance ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-[#26D07C] bg-[#26D07C]/10'} shadow-inner`}>
-                                    <AvatarIcon name={human.avatar} size={24} className={human.balance === maxBalance ? 'text-[#FFD700]' : 'text-[#26D07C]'} />
-                                </div>
+                                {displayImage ? (
+                                    <img
+                                        src={displayImage}
+                                        alt={displayName}
+                                        className="w-full h-full rounded-[14px] border-2 border-[#26D07C] object-cover"
+                                    />
+                                ) : (
+                                    <div className={`w-full h-full rounded-[14px] flex items-center justify-center border-[2px] ${human.balance === maxBalance ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-[#26D07C] bg-[#26D07C]/10'} shadow-inner`}>
+                                        <AvatarIcon name={human.avatar} size={24} className={human.balance === maxBalance ? 'text-[#FFD700]' : 'text-[#26D07C]'} />
+                                    </div>
+                                )}
                                 {/* Online Dot */}
                                 <div className="absolute top-0 right-0 w-3 h-3 bg-[#00FF88] rounded-full border-2 border-[#0F172A] shadow-sm animate-pulse"></div>
                             </div>
                             <div className="flex flex-col justify-center">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sovereign ID</span>
-                                    {human.balance === maxBalance && <Crown size={12} className="text-[#FFD700] fill-[#FFD700]" />}
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account</span>
+                                    <ChevronDown size={12} className="text-slate-400" />
                                 </div>
-                                <span className="text-xl font-black text-white tabular-nums leading-none mt-0.5">${human.balance.toLocaleString()}</span>
+                                <span className="text-sm font-bold text-white leading-none mt-0.5">{displayName}</span>
                             </div>
                         </div>
-                    )}
+
+                        {/* Account Dropdown Menu */}
+                        {showAccountMenu && (
+                            <div className="absolute top-full mt-2 left-0 w-56 bg-[#0F172A]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+                                <div className="p-3 border-b border-white/10">
+                                    <p className="text-slate-400 text-xs">Signed in as</p>
+                                    <p className="text-white text-sm font-medium truncate">{displayName}</p>
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                                >
+                                    <LogOut size={16} />
+                                    <span className="text-sm font-medium">Sign Out</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Balance Display */}
+                    <div className="flex items-center gap-3 bg-[#1E293B]/50 px-4 rounded-[18px] border border-white/5 h-full">
+                        <div className="flex flex-col justify-center">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Balance</span>
+                            <span className="text-xl font-black text-white tabular-nums leading-none mt-0.5">${human?.balance.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* RIGHT WING: INTEL ARRAY (Leaderboard) */}
