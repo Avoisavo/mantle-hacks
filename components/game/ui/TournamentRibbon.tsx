@@ -50,9 +50,12 @@ export const TournamentRibbon: React.FC<TournamentRibbonProps> = ({ players, cur
                                 <div className="w-4 h-4 rounded bg-slate-700 flex items-center justify-center border border-white/10">
                                     <AvatarIcon name={p.avatar} size={10} className="text-slate-400" />
                                 </div>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider ${p.balance === maxBalance ? 'text-[#FFD700]' : 'text-slate-400'}`}>
-                                    {p.name}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${p.balance === maxBalance ? 'text-[#FFD700]' : 'text-slate-400'}`}>
+                                        {p.name}
+                                    </span>
+                                    {p.balance === maxBalance && <Crown size={10} className="text-[#FFD700] fill-[#FFD700]" />}
+                                </div>
                             </div>
                             <span className="text-xs font-mono font-bold text-slate-300 tabular-nums">${p.balance.toLocaleString()}</span>
                         </div>

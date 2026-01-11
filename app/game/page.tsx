@@ -38,7 +38,9 @@ export default function GamePage() {
             { id: 'initial', user: 'System', action: 'Vault initialized.', timestamp: 'Now', type: 'SYSTEM' }
         ],
         prizePot: 240500,
-        status: 'PLAYING'
+        status: 'PLAYING',
+        turn: 1,
+        maxTurns: 15
     });
 
     const [isRolling, setIsRolling] = useState(false);
@@ -75,10 +77,15 @@ export default function GamePage() {
     }, []);
 
     const nextTurn = useCallback(() => {
-        setGameState(prev => ({
-            ...prev,
-            currentPlayerIndex: (prev.currentPlayerIndex + 1) % prev.players.length
-        }));
+        setGameState(prev => {
+            const nextIdx = (prev.currentPlayerIndex + 1) % prev.players.length;
+            const newTurn = nextIdx === 0 ? prev.turn + 1 : prev.turn;
+            return {
+                ...prev,
+                currentPlayerIndex: nextIdx,
+                turn: newTurn
+            };
+        });
         setShowAssetOverlay(false);
     }, []);
 
@@ -248,6 +255,8 @@ export default function GamePage() {
                 onHoverChange={setIsRollHovered} // Capture hover
                 disabled={gameState.currentPlayerIndex !== 0 || isRolling || showAssetOverlay || showCustomizer || movementQueue.length > 0}
                 isTurn={gameState.currentPlayerIndex === 0}
+                turn={gameState.turn}
+                maxTurns={gameState.maxTurns}
             />
 
             {/* --- OVERLAYS --- */}

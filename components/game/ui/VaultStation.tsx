@@ -1,9 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Archive, Layers } from 'lucide-react';
 import { useOdometer } from '@/lib/game/hooks';
 
 export const VaultStation = ({ value }: { value: number }) => {
     const displayValue = useOdometer(value);
+    const [isPulsing, setIsPulsing] = useState(false);
+    const prevValue = useRef(value);
+
+    useEffect(() => {
+        if (value > prevValue.current) {
+            setIsPulsing(true);
+            const timer = setTimeout(() => setIsPulsing(false), 300);
+            return () => clearTimeout(timer);
+        }
+        prevValue.current = value;
+    }, [value]);
 
     return (
         <div className="absolute bottom-6 left-8 z-50 pointer-events-none flex flex-col items-start select-none mix-blend-screen">
@@ -18,7 +29,7 @@ export const VaultStation = ({ value }: { value: number }) => {
 
             {/* Digital Filament Number */}
             <div className="relative">
-                <span className="font-mono text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(0,255,136,0.5)]">
+                <span className={`font-mono text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(0,255,136,0.5)] transition-all duration-300 ${isPulsing ? 'scale-105 brightness-150' : ''}`}>
                     ${displayValue.toLocaleString()}
                 </span>
 
