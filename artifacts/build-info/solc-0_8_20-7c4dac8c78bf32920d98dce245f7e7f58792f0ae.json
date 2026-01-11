@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-7c4dac8c78bf32920d98dce245f7e7f58792f0ae",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "userSourceNameMap": {
+    "contracts/towntopup.sol": "project/contracts/towntopup.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/towntopup.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * Simple fixed-rate top-up:\n * 1 native token (Mantle Sepolia / \"Sepolia Mantle\") -> 50 TOWN\n *\n * - Users send native token to the converter (buyTOWN / receive()).\n * - Contract mints TOWN to the sender at a fixed rate.\n * - Owner can withdraw collected native token.\n *\n */\n\ncontract TownToken {\n    // -- ERC20 minimal ---\n    string public name = \"Town Token\";\n    string public symbol = \"TOWN\";\n    uint8 public decimals = 18;\n\n    uint256 public totalSupply;\n\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n\n    address public owner;\n    mapping(address => bool) public isMinter;\n\n    // ERC20 Events\n    event Transfer(address indexed from, address indexed to, uint256 value);\n    event Approval(\n        address indexed owner,\n        address indexed spender,\n        uint256 value\n    );\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"NOT_OWNER\");\n        _;\n    }\n\n    modifier onlyMinter() {\n        require(isMinter[msg.sender], \"NOT_MINTER\");\n        _;\n    }\n\n    constructor(address _owner) {\n        owner = _owner;\n    }\n\n    function setMinter(address minter, bool allowed) external onlyOwner {\n        isMinter[minter] = allowed;\n    }\n\n    function transfer(address to, uint256 value) external returns (bool) {\n        _transfer(msg.sender, to, value);\n        return true;\n    }\n\n    // allow 500town to buy houses\n    function approve(address spender, uint256 value) external returns (bool) {\n        allowance[msg.sender][spender] = value;\n        emit Approval(msg.sender, spender, value);\n        return true;\n    }\n\n    function mint(address to, uint256 value) external onlyMinter {\n        totalSupply += value;\n        balanceOf[to] += value;\n        emit Transfer(address(0), to, value);\n    }\n\n    //move town token from A to B\n    function _transfer(address from, address to, uint256 value) internal {\n        require(to != address(0), \"ZERO_TO\");\n        uint256 bal = balanceOf[from];\n        require(bal >= value, \"BALANCE\");\n        balanceOf[from] = bal - value;\n        balanceOf[to] += value;\n        emit Transfer(from, to, value);\n    }\n}\n\ncontract TownTopUp {\n    uint256 public constant RATE = 50; // 50 TOWN per 1 native token (1e18 wei)\n\n    TownToken public immutable town;\n    address public owner;\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"NOT_OWNER\");\n        _;\n    }\n\n    constructor() {\n        owner = msg.sender;\n\n        // Deploy token and set this contract as minter\n        TownToken _town = new TownToken(msg.sender);\n        town = _town;\n        _town.setMinter(address(this), true);\n    }\n\n    function buyTOWN() external payable {\n        _buy(msg.sender, msg.value);\n    }\n\n    receive() external payable {\n        _buy(msg.sender, msg.value);\n    }\n\n    function _buy(address user, uint256 amountWei) internal {\n        require(amountWei > 0, \"ZERO_VALUE\");\n\n        // 1e18 wei * 50 => 50e18 (i.e., 50 tokens with 18 decimals)\n        uint256 mintAmount = amountWei * RATE;\n\n        town.mint(user, mintAmount);\n    }\n}\n"
+      }
+    }
+  }
+}

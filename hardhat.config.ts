@@ -1,10 +1,10 @@
+import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-ethers";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
-/** @type import('hardhat/config').HardhatUserConfig */
-export default {
+const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.20",
     settings: {
@@ -16,12 +16,12 @@ export default {
   },
   networks: {
     mantleSepolia: {
+      type: "http",
       url: process.env.MANTLE_RPC_URL || "https://rpc.sepolia.mantle.xyz",
       chainId: 5003,
-      accounts: [
-        process.env.DEPLOYER_PRIVATE_KEY, 
-        process.env.RELAY_PRIVATE_KEY
-      ].filter(Boolean),
+      accounts: process.env.DEPLOYER_PRIVATE_KEY 
+        ? [process.env.DEPLOYER_PRIVATE_KEY, process.env.RELAY_PRIVATE_KEY].filter((k): k is string => !!k)
+        : [],
     },
   },
   paths: {
@@ -31,3 +31,5 @@ export default {
     artifacts: "./artifacts",
   },
 };
+
+export default config;
