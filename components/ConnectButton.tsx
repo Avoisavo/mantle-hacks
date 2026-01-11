@@ -1,0 +1,125 @@
+"use client";
+
+import { ConnectButton as RainbowConnectButton } from "@rainbow-me/rainbowkit";
+import { motion } from "framer-motion";
+
+export default function ConnectButton() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3 }}
+      className="w-full"
+    >
+      <RainbowConnectButton.Custom>
+        {({
+          account,
+          chain,
+          openAccountModal,
+          openChainModal,
+          openConnectModal,
+          authenticationStatus,
+          mounted,
+        }) => {
+          const ready = mounted && authenticationStatus !== "loading";
+          const connected =
+            ready &&
+            account &&
+            chain &&
+            (!authenticationStatus ||
+              authenticationStatus === "authenticated");
+
+          return (
+            <div
+              {...(!ready && {
+                "aria-hidden": true,
+                style: {
+                  opacity: 0,
+                  pointerEvents: "none",
+                  userSelect: "none",
+                },
+              })}
+              className="w-full"
+            >
+              {(() => {
+                if (!connected) {
+                  return (
+                    <motion.button
+                      onClick={openConnectModal}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full relative overflow-hidden group"
+                    >
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>
+
+                      {/* Button background */}
+                      <div className="relative w-full bg-white/5 backdrop-blur-xl border border-purple-400/40 rounded-full px-6 py-3.5 flex items-center justify-center gap-3 hover:border-purple-300/60 transition-all duration-300">
+                        {/* Text */}
+                        <span className="text-white font-semibold text-base">
+                          Connect Wallet
+                        </span>
+                      </div>
+                    </motion.button>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      onClick={openChainModal}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="relative overflow-hidden group"
+                    >
+                      <div className="relative bg-white/5 backdrop-blur-xl border border-purple-400/40 rounded-full px-4 py-2.5 flex items-center gap-2 hover:border-purple-300/60 transition-all duration-300">
+                        {chain.hasIcon && (
+                          <div
+                            style={{
+                              background: chain.iconBackground,
+                              width: 16,
+                              height: 16,
+                              borderRadius: 999,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {chain.iconUrl && (
+                              <img
+                                alt={chain.name ?? "Chain icon"}
+                                src={chain.iconUrl}
+                                style={{ width: 16, height: 16 }}
+                              />
+                            )}
+                          </div>
+                        )}
+                        <span className="text-white font-medium text-sm">{chain.name}</span>
+                      </div>
+                    </motion.button>
+
+                    <motion.button
+                      onClick={openAccountModal}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="relative overflow-hidden group"
+                    >
+                      <div className="relative bg-white/5 backdrop-blur-xl border border-pink-400/40 rounded-full px-4 py-2.5 flex items-center gap-2 hover:border-pink-300/60 transition-all duration-300">
+                        <span className="text-white font-medium text-sm">
+                          {account.displayName}
+                        </span>
+                        <span className="text-white/70 text-xs">
+                          {account.displayBalance
+                            ? ` (${account.displayBalance})`
+                            : ""}
+                        </span>
+                      </div>
+                    </motion.button>
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        }}
+      </RainbowConnectButton.Custom>
+    </motion.div>
+  );
+}
