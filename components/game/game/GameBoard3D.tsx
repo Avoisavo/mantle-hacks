@@ -19,9 +19,13 @@ const SmoothPlayerToken: React.FC<{
   playerIndex: number;
   color: string;
   modelUrl?: string;
-  targetPosition: [number, number, number]
-}> = ({ playerIndex, color, modelUrl = '/game/ChickenGuy.glb', targetPosition }) => {
+  targetPosition: [number, number, number];
+  currentPosition: number;
+}> = ({ playerIndex, color, modelUrl = '/game/ChickenGuy.glb', targetPosition, currentPosition }) => {
   const groupRef = useRef<THREE.Group>(null);
+  const modelRef = useRef<THREE.Group>(null);
+  const [targetRotation, setTargetRotation] = useState(0);
+  const previousPosition = useRef(currentPosition);
 
   // Spiral-like offset for multi-player tiles to prevent overlap
   const offset = useMemo(() => {
@@ -36,12 +40,28 @@ const SmoothPlayerToken: React.FC<{
     return vec;
   }, [targetPosition, offset]);
 
+  // Check if we hit a turning point (0, 9, 18, 27)
+  useEffect(() => {
+    const turningPoints = [0, 9, 18, 27];
+    if (turningPoints.includes(currentPosition) && previousPosition.current !== currentPosition) {
+      setTargetRotation(prev => prev - Math.PI / 2); // Subtract 90 degrees
+    }
+    previousPosition.current = currentPosition;
+  }, [currentPosition]);
+
   // Handle smooth movement frame-by-frame
   useFrame((_state, delta) => {
     if (groupRef.current) {
       // Lerp current position to target with a fixed speed for consistency
       const lerpFactor = Math.min(15 * delta, 1.0);
       groupRef.current.position.lerp(targetVec, lerpFactor);
+    }
+
+    // Smoothly rotate the model on z-axis
+    if (modelRef.current) {
+      const currentRot = modelRef.current.rotation.z;
+      const lerpFactor = Math.min(10 * delta, 1.0);
+      modelRef.current.rotation.z = THREE.MathUtils.lerp(currentRot, targetRotation, lerpFactor);
     }
   });
 
@@ -50,7 +70,7 @@ const SmoothPlayerToken: React.FC<{
     if (groupRef.current) {
       groupRef.current.position.copy(targetVec);
     }
-  }, []);
+  }, [targetVec]);
 
   // Load the GLB model
   const gltf = useGLTF(modelUrl);
@@ -78,7 +98,7 @@ const SmoothPlayerToken: React.FC<{
   }, [gltf.scene, playerIndex]);
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} position={targetVec}>
         <pointLight position={[0, 0, 2]} intensity={10} distance={5} color={color} />
 
         {/* Base identity ring - glowing under the character */}
@@ -94,12 +114,14 @@ const SmoothPlayerToken: React.FC<{
         </mesh>
 
         {/* The Model Container - matching landing page settings */}
-        <primitive
-            object={modelScene}
-            position={[0, 0, 0]}
-            rotation={[0, Math.PI / 2, Math.PI / 2]}
-            scale={1.5}
-        />
+        <group ref={modelRef}>
+          <primitive
+              object={modelScene}
+              position={[0, 0, 0]}
+              rotation={[0, Math.PI / 2, Math.PI / 2]}
+              scale={0.8}
+          />
+        </group>
     </group>
   );
 };
@@ -245,6 +267,7 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
                   color={p.color}
                   modelUrl={p.modelUrl}
                   targetPosition={[x, y, 0.1]}
+                  currentPosition={p.position}
               />
           )
         })}
