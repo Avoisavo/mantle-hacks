@@ -3,7 +3,7 @@ import { Chain } from "viem";
 export const MANTLE_SEPOLIA: Chain = {
   id: 5003,
   name: "Mantle Sepolia Testnet",
-  network: "mantle-sepolia",
+
   nativeCurrency: {
     decimals: 18,
     name: "Mantle",
