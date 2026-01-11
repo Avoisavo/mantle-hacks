@@ -195,73 +195,7 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
 
-      {/* --- CENTRAL APPRAISAL BEAM --- */}
-      <group position={[0, 0, 0]}>
-        {/* 1. The Projector Lens (Floor) */}
-        <Cylinder args={[3, 3, 0.2, 64]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-          <meshPhysicalMaterial
-            color="#111"
-            roughness={0.1}
-            metalness={0.9}
-            emissive="#00FF88"
-            emissiveIntensity={0.5}
-            transmission={0.5}
-            thickness={1}
-          />
-        </Cylinder>
-        {/* Lens Rim */}
-        <Torus args={[3, 0.2, 16, 64]} rotation={[0, 0, 0]}>
-          <meshStandardMaterial color="#333" metalness={1} roughness={0.2} />
-        </Torus>
 
-        {/* 2. The Volumetric Beam (Light Shaft) */}
-        <mesh position={[0, 0, 15]}>
-          {/* Tall faint cylinder */}
-          <cylinderGeometry args={[3, 4, 30, 32, 1, true]} />
-          <meshBasicMaterial
-            color="#00FF88"
-            transparent
-            opacity={0.05}
-            side={THREE.DoubleSide}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-        {/* Core Beam (Brighter, narrower) */}
-        <mesh position={[0, 0, 15]}>
-          <cylinderGeometry args={[1, 0.5, 30, 32, 1, true]} />
-          <meshBasicMaterial
-            color="#CCFFEE"
-            transparent
-            opacity={0.1}
-            side={THREE.DoubleSide}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-
-        {/* 3. The Giant Hologram Stage */}
-        <group position={[0, 0, 5]} scale={2.5}>
-          <HologramCore activeAsset={currentAsset} />
-        </group>
-
-        {/* Floating Data Display */}
-        <Html position={[0, 0, 12]} center transform sprite>
-          <div className="flex flex-col items-center pointer-events-none select-none">
-            {currentAsset ? (
-              <div className="bg-[#00FF88]/10 backdrop-blur-md px-4 py-2 rounded-lg border border-[#00FF88]/50 text-center shadow-[0_0_30px_rgba(0,255,136,0.4)]">
-                <div className="text-[#00FF88] text-[8px] font-black uppercase tracking-widest mb-1">Appraising</div>
-                <div className="text-white text-lg font-black uppercase leading-none">{currentAsset.name}</div>
-                <div className="text-[#00FF88] text-sm font-mono font-bold">${currentAsset.price.toLocaleString()}</div>
-              </div>
-            ) : (
-              <div className="bg-[#0F172A]/80 backdrop-blur border border-[#00FF88]/30 px-3 py-1 rounded-full shadow-[0_0_15px_rgba(0,255,136,0.3)] mb-1">
-                <span className="text-[#00FF88] text-xs font-black tracking-widest uppercase animate-pulse">Awaiting Signal</span>
-              </div>
-            )}
-          </div>
-        </Html>
-      </group>
 
 
       {/* --- BOARD TILES --- */}

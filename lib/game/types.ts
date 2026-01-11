@@ -49,4 +49,6 @@ export interface GameState {
   logs: GameLog[];
   prizePot: number;
   status: 'LOBBY' | 'PLAYING' | 'LIQUIDATED';
+  turn: number;
+  maxTurns: number;
 }
