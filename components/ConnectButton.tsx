@@ -2,15 +2,30 @@
 
 import { ConnectButton as RainbowConnectButton } from "@rainbow-me/rainbowkit";
 import { motion } from "framer-motion";
+import { useConnect, injected } from "wagmi";
 
 export default function ConnectButton() {
+  const { connect } = useConnect();
+
+  const isMobile = () => {
+    if (typeof window === "undefined") return false;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+  };
+
+  const handleConnect = () => {
+    if (isMobile()) {
+      // On mobile, use RainbowKit modal (shows QR code)
+      return;
+    } else {
+      // On desktop, directly connect to injected wallet (MetaMask extension)
+      connect({ connector: injected() });
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3 }}
-      className="w-full"
-    >
+    <motion.div className="w-full">
       <RainbowConnectButton.Custom>
         {({
           account,
@@ -45,10 +60,17 @@ export default function ConnectButton() {
                 if (!connected) {
                   return (
                     <motion.button
-                      onClick={openConnectModal}
+                      onClick={() => {
+                        if (isMobile()) {
+                          openConnectModal();
+                        } else {
+                          handleConnect();
+                        }
+                      }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="w-full relative overflow-hidden group"
+                      style={{ cursor: "pointer" }}
                     >
                       {/* Glow effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>

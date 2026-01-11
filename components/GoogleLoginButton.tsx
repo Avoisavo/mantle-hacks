@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export default function GoogleLoginButton() {
   const handleGoogleLogin = async () => {
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/game" });
     } catch (error) {
       console.error("Google login failed:", error);
     }
@@ -20,6 +20,7 @@ export default function GoogleLoginButton() {
       whileTap={{ scale: 0.98 }}
       onClick={handleGoogleLogin}
       className="w-full relative overflow-hidden group"
+      style={{ cursor: "pointer" }}
     >
       {/* Glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-600 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>
