@@ -1,56 +1,95 @@
-import { useState } from "react";
-import { useAccount, useWriteContract, useReadContract, useBalance } from "wagmi";
+import { useState, useEffect } from "react";
+import { useAccount, useWriteContract, useReadContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { TOWN_TOPUP_ADDRESS, TOWN_TOKEN_ADDRESS, SEPOLIA_MNT_TOKEN_ADDRESS } from "@/utils/address";
-import { ABI as TownTopUpABI } from "@/utils/towntopup";
+import {
+    SEPOLIA_MNT_TOKEN_ADDRESS,
+    TOWN_TOPUP_ERC20_ADDRESS,
+    TOWN_TOKEN_SEPOLIA_ADDRESS
+} from "@/utils/address";
+import { ABI as TownTopUpERC20ABI, ERC20_ABI } from "@/utils/towntopupERC20";
 import { ABI as TownTokenABI } from "@/utils/towntoken";
-import { mantleSepoliaTestnet, sepolia } from "wagmi/chains";
+import { sepolia } from "wagmi/chains";
 
-// Chain IDs
-const MANTLE_SEPOLIA_CHAIN_ID = mantleSepoliaTestnet.id; // 5003
-const ETH_SEPOLIA_CHAIN_ID = sepolia.id; // 11155111 (for SepoliaMNT token)
+// Ethereum Sepolia Chain ID
+const CHAIN_ID = sepolia.id; // 11155111
 
-export default function TestTopUp() {
+export default function TestTopUpSepolia() {
     const [mntAmount, setMntAmount] = useState("0.1");
     const [status, setStatus] = useState("");
+    const [needsApproval, setNeedsApproval] = useState(true);
 
-    const { address, isConnected, chainId } = useAccount();
+    const { address, isConnected } = useAccount();
 
-    // Get native MNT balance on Mantle Sepolia
-    const { data: mntBalance, refetch: refetchMntBalance } = useBalance({
-        address: address,
-        chainId: MANTLE_SEPOLIA_CHAIN_ID,
-    });
-
-    // Get SepoliaMNT token balance (ERC20 on Ethereum Sepolia)
-    const { data: sepoliaMntBalance } = useReadContract({
+    // Get SepoliaMNT balance
+    const { data: sepoliaMntBalance, refetch: refetchMntBalance } = useReadContract({
         address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
-        abi: TownTokenABI, // ERC20 ABI - balanceOf is standard
+        abi: ERC20_ABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
-        chainId: ETH_SEPOLIA_CHAIN_ID,
+        chainId: CHAIN_ID,
     });
 
-    // Get TOWN balance
+    // Get TOWN balance (on Sepolia)
     const { data: townBalance, refetch: refetchTownBalance } = useReadContract({
-        address: TOWN_TOKEN_ADDRESS as `0x${string}`,
+        address: TOWN_TOKEN_SEPOLIA_ADDRESS as `0x${string}`,
         abi: TownTokenABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
-        chainId: MANTLE_SEPOLIA_CHAIN_ID,
+        chainId: CHAIN_ID,
+    });
+
+    // Get current allowance
+    const { data: allowance, refetch: refetchAllowance } = useReadContract({
+        address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: address ? [address, TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`] : undefined,
+        chainId: CHAIN_ID,
     });
 
     // Get conversion rate
     const { data: rate } = useReadContract({
-        address: TOWN_TOPUP_ADDRESS as `0x${string}`,
-        abi: TownTopUpABI,
+        address: TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`,
+        abi: TownTopUpERC20ABI,
         functionName: "RATE",
-        chainId: MANTLE_SEPOLIA_CHAIN_ID,
+        chainId: CHAIN_ID,
     });
 
-    // Buy TOWN function
+    // Check if approval is needed
+    useEffect(() => {
+        if (allowance && mntAmount) {
+            const requiredAmount = parseEther(mntAmount);
+            setNeedsApproval((allowance as bigint) < requiredAmount);
+        }
+    }, [allowance, mntAmount]);
+
+    // Write contract functions
     const { writeContract, isPending } = useWriteContract();
+
+    const handleApprove = async () => {
+        try {
+            setStatus("Approving SepoliaMNT...");
+            writeContract({
+                address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "approve",
+                args: [TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`, parseEther("1000000")], // Approve large amount
+                chainId: CHAIN_ID,
+            }, {
+                onSuccess: () => {
+                    setStatus("✅ Approval successful! Now you can buy TOWN.");
+                    refetchAllowance();
+                    setNeedsApproval(false);
+                },
+                onError: (error) => {
+                    setStatus(`Error: ${error.message}`);
+                },
+            });
+        } catch (error: any) {
+            setStatus(`Error: ${error.message}`);
+        }
+    };
 
     const handleBuyTown = async () => {
         if (!mntAmount || parseFloat(mntAmount) <= 0) {
@@ -59,16 +98,18 @@ export default function TestTopUp() {
         }
 
         try {
-            setStatus("Sending transaction...");
+            setStatus("Buying TOWN...");
             writeContract({
-                address: TOWN_TOPUP_ADDRESS as `0x${string}`,
-                abi: TownTopUpABI,
+                address: TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`,
+                abi: TownTopUpERC20ABI,
                 functionName: "buyTOWN",
-                value: parseEther(mntAmount),
+                args: [parseEther(mntAmount)],
+                chainId: CHAIN_ID,
             }, {
                 onSuccess: () => {
-                    setStatus(`Success! You bought ${parseFloat(mntAmount) * 50} TOWN`);
+                    setStatus(`✅ Success! You bought ${parseFloat(mntAmount) * 50} TOWN`);
                     refetchTownBalance();
+                    refetchMntBalance();
                 },
                 onError: (error) => {
                     setStatus(`Error: ${error.message}`);
@@ -102,14 +143,22 @@ export default function TestTopUp() {
                     marginBottom: "10px",
                     textAlign: "center",
                 }}>
-                    🏘️ TownTopUp Test
+                    🏘️ TownTopUp (Ethereum Sepolia)
                 </h1>
+                <p style={{
+                    color: "#10b981",
+                    textAlign: "center",
+                    marginBottom: "10px",
+                    fontSize: "14px",
+                }}>
+                    Convert SepoliaMNT → TOWN
+                </p>
                 <p style={{
                     color: "#888",
                     textAlign: "center",
                     marginBottom: "30px",
                 }}>
-                    1 MNT = 50 TOWN
+                    1 SepoliaMNT = 50 TOWN
                 </p>
 
                 {/* Connect Wallet */}
@@ -126,15 +175,9 @@ export default function TestTopUp() {
                             padding: "20px",
                             marginBottom: "20px",
                         }}>
-                            <h3 style={{ color: "#ec4899", marginBottom: "15px", fontSize: "14px" }}>Your Balances</h3>
+                            <h3 style={{ color: "#10b981", marginBottom: "15px", fontSize: "14px" }}>Your Balances</h3>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span style={{ color: "#888" }}>MNT (Mantle Sepolia):</span>
-                                <span style={{ color: "#fff", fontWeight: "bold" }}>
-                                    {mntBalance ? parseFloat(formatEther(mntBalance.value)).toFixed(4) : "0"} MNT
-                                </span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span style={{ color: "#888" }}>SepoliaMNT (Eth Sepolia):</span>
+                                <span style={{ color: "#888" }}>SepoliaMNT:</span>
                                 <span style={{ color: "#10b981", fontWeight: "bold" }}>
                                     {sepoliaMntBalance ? parseFloat(formatEther(sepoliaMntBalance as bigint)).toFixed(4) : "0"} MNT
                                 </span>
@@ -149,21 +192,21 @@ export default function TestTopUp() {
 
                         {/* Conversion Rate */}
                         <div style={{
-                            background: "rgba(236, 72, 153, 0.1)",
+                            background: "rgba(16, 185, 129, 0.1)",
                             borderRadius: "12px",
                             padding: "15px",
                             marginBottom: "20px",
                             textAlign: "center",
                         }}>
-                            <span style={{ color: "#ec4899", fontSize: "14px" }}>
-                                Rate: 1 MNT = {rate ? rate.toString() : "50"} TOWN
+                            <span style={{ color: "#10b981", fontSize: "14px" }}>
+                                Rate: 1 SepoliaMNT = {rate ? rate.toString() : "50"} TOWN
                             </span>
                         </div>
 
                         {/* Input */}
                         <div style={{ marginBottom: "20px" }}>
                             <label style={{ color: "#888", fontSize: "14px", display: "block", marginBottom: "8px" }}>
-                                Amount (MNT)
+                                Amount (SepoliaMNT)
                             </label>
                             <input
                                 type="number"
@@ -185,30 +228,55 @@ export default function TestTopUp() {
                                 }}
                             />
                             <p style={{ color: "#888", fontSize: "12px", marginTop: "8px" }}>
-                                You will receive: <span style={{ color: "#ec4899", fontWeight: "bold" }}>{expectedTown} TOWN</span>
+                                You will receive: <span style={{ color: "#10b981", fontWeight: "bold" }}>{expectedTown} TOWN</span>
                             </p>
                         </div>
+
+                        {/* Approve Button (if needed) */}
+                        {needsApproval && (
+                            <button
+                                onClick={handleApprove}
+                                disabled={isPending}
+                                style={{
+                                    width: "100%",
+                                    padding: "15px",
+                                    borderRadius: "12px",
+                                    border: "none",
+                                    background: isPending
+                                        ? "rgba(251, 191, 36, 0.5)"
+                                        : "linear-gradient(135deg, #f59e0b, #d97706)",
+                                    color: "#fff",
+                                    fontSize: "16px",
+                                    fontWeight: "bold",
+                                    cursor: isPending ? "not-allowed" : "pointer",
+                                    transition: "all 0.2s",
+                                    marginBottom: "10px",
+                                }}
+                            >
+                                {isPending ? "Approving..." : "1. Approve SepoliaMNT"}
+                            </button>
+                        )}
 
                         {/* Buy Button */}
                         <button
                             onClick={handleBuyTown}
-                            disabled={isPending}
+                            disabled={isPending || needsApproval}
                             style={{
                                 width: "100%",
                                 padding: "15px",
                                 borderRadius: "12px",
                                 border: "none",
-                                background: isPending
-                                    ? "rgba(236, 72, 153, 0.5)"
-                                    : "linear-gradient(135deg, #ec4899, #8b5cf6)",
+                                background: (isPending || needsApproval)
+                                    ? "rgba(16, 185, 129, 0.3)"
+                                    : "linear-gradient(135deg, #10b981, #059669)",
                                 color: "#fff",
                                 fontSize: "16px",
                                 fontWeight: "bold",
-                                cursor: isPending ? "not-allowed" : "pointer",
+                                cursor: (isPending || needsApproval) ? "not-allowed" : "pointer",
                                 transition: "all 0.2s",
                             }}
                         >
-                            {isPending ? "Processing..." : `Buy ${expectedTown} TOWN`}
+                            {isPending ? "Processing..." : needsApproval ? "2. Buy TOWN (Approve first)" : `Buy ${expectedTown} TOWN`}
                         </button>
 
                         {/* Status */}
@@ -219,14 +287,14 @@ export default function TestTopUp() {
                                 borderRadius: "12px",
                                 background: status.includes("Error")
                                     ? "rgba(239, 68, 68, 0.2)"
-                                    : status.includes("Success")
+                                    : status.includes("✅")
                                         ? "rgba(34, 197, 94, 0.2)"
-                                        : "rgba(236, 72, 153, 0.2)",
+                                        : "rgba(16, 185, 129, 0.2)",
                                 color: status.includes("Error")
                                     ? "#ef4444"
-                                    : status.includes("Success")
+                                    : status.includes("✅")
                                         ? "#22c55e"
-                                        : "#ec4899",
+                                        : "#10b981",
                                 fontSize: "14px",
                                 textAlign: "center",
                             }}>
@@ -243,8 +311,9 @@ export default function TestTopUp() {
                             fontSize: "11px",
                             color: "#666",
                         }}>
-                            <p style={{ marginBottom: "5px" }}>TownTopUp: {TOWN_TOPUP_ADDRESS}</p>
-                            <p>TownToken: {TOWN_TOKEN_ADDRESS}</p>
+                            <p style={{ marginBottom: "5px" }}>TownTopUpERC20: {TOWN_TOPUP_ERC20_ADDRESS}</p>
+                            <p style={{ marginBottom: "5px" }}>TownToken: {TOWN_TOKEN_SEPOLIA_ADDRESS}</p>
+                            <p>SepoliaMNT: {SEPOLIA_MNT_TOKEN_ADDRESS}</p>
                         </div>
                     </>
                 )}
