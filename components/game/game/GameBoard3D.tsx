@@ -1,8 +1,9 @@
 import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Environment, ContactShadows, PerspectiveCamera, Float, RoundedBox, Sparkles, Cylinder, Sphere, Text, Text3D, Torus, Cone, Icosahedron, Box, Grid, Html, useGLTF, Center, Clone, Gltf } from '@react-three/drei';
+import { Environment, ContactShadows, PerspectiveCamera, Float, RoundedBox, Sparkles, Cylinder, Sphere, Text, Text3D, Torus, Cone, Icosahedron, Box, Grid, Html, useGLTF, Center, Clone } from '@react-three/drei';
 import * as THREE from 'three';
 import { Player, Asset, AssetType } from '@/lib/game/types';
+import { SkeletonUtils } from 'three-stdlib';
 
 interface GameBoard3DProps {
   players: Player[];
@@ -16,12 +17,12 @@ interface GameBoard3DProps {
 
 const SmoothPlayerToken: React.FC<{
   playerIndex: number;
-  color: string; 
-  modelUrl?: string; 
-  targetPosition: [number, number, number] 
+  color: string;
+  modelUrl?: string;
+  targetPosition: [number, number, number]
 }> = ({ playerIndex, color, modelUrl = '/game/ChickenGuy.glb', targetPosition }) => {
   const groupRef = useRef<THREE.Group>(null);
-  
+
   // Spiral-like offset for multi-player tiles to prevent overlap
   const offset = useMemo(() => {
     const angle = (playerIndex / 4) * Math.PI * 2;
@@ -32,7 +33,6 @@ const SmoothPlayerToken: React.FC<{
   // Calculate actual target in 3D space
   const targetVec = useMemo(() => {
     const vec = new THREE.Vector3(...targetPosition).add(offset);
-    // console.log(`Player ${playerIndex} target:`, vec.toArray());
     return vec;
   }, [targetPosition, offset]);
 
@@ -52,53 +52,54 @@ const SmoothPlayerToken: React.FC<{
     }
   }, []);
 
-  // Spin animation for the inner model
-  const modelRef = useRef<THREE.Group>(null);
-  useFrame((state) => {
-      if (modelRef.current) {
-          // Reduced idle animation - very subtle breathing
-          modelRef.current.position.y = Math.sin(state.clock.elapsedTime * 2 + playerIndex) * 0.02;
+  // Load the GLB model
+  const gltf = useGLTF(modelUrl);
+
+  // Clone the scene uniquely for this player instance using deep clone
+  const modelScene = useMemo(() => {
+    // Use SkeletonUtils for deep cloning (includes materials, bones, etc.)
+    const cloned = SkeletonUtils.clone(gltf.scene);
+
+    // Force all children to be visible
+    cloned.traverse((child) => {
+      if (child instanceof THREE.Object3D) {
+        child.visible = true;
       }
-  });
+      if (child instanceof THREE.Mesh) {
+        // Ensure materials render and clone them
+        if (child.material) {
+          child.material = child.material.clone();
+          child.material.needsUpdate = true;
+        }
+      }
+    });
+
+    return cloned;
+  }, [gltf.scene, playerIndex]);
 
   return (
     <group ref={groupRef}>
         <pointLight position={[0, 0, 2]} intensity={10} distance={5} color={color} />
-        
+
         {/* Base identity ring - glowing under the character */}
         <mesh position={[0, 0, 0.05]}>
             <torusGeometry args={[0.4, 0.04, 16, 32]} />
-            <meshStandardMaterial 
-              color={color} 
-              emissive={color} 
-              emissiveIntensity={2} 
-              transparent 
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={2}
+              transparent
               opacity={0.8}
             />
         </mesh>
 
-        {/* The Model Container */}
-        <Suspense fallback={
-            <mesh position={[0, 0, 0.5]}>
-                <sphereGeometry args={[0.3]} />
-                <meshStandardMaterial color={color} />
-            </mesh>
-        }>
-            {/* 
-                ROTATION FIX:
-                1. Rotate X by 90deg (Math.PI/2) to align Model-Y (Up) with Board-Z (Up).
-                2. Position Z shift helps it stand ON ground not IN it.
-            */}
-            <group rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                 {/* Internal Group for Bounce/Facing */}
-                 <group ref={modelRef} rotation={[0, Math.PI / 2 + (playerIndex * 0.8), 0]}> 
-                     <Gltf 
-                        src={modelUrl || '/game/ChickenGuy.glb'} 
-                        scale={1.1} 
-                     />
-                 </group>
-            </group>
-        </Suspense>
+        {/* The Model Container - matching landing page settings */}
+        <primitive
+            object={modelScene}
+            position={[0, 0, 0]}
+            rotation={[0, Math.PI / 2, Math.PI / 2]}
+            scale={1.5}
+        />
     </group>
   );
 };
@@ -233,19 +234,21 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
       })}
 
       {/* Players */}
-      {players.map((p, i) => {
-        // Apply same visual offset to players
-        const [x, y] = getBoardPosition((p.position + 9) % 36);
-        return (
-            <SmoothPlayerToken 
-                key={p.id} 
-                playerIndex={i}
-                color={p.color} 
-                modelUrl={p.modelUrl} 
-                targetPosition={[x, y, 0.1]} 
-            />
-        )
-      })}
+      <Suspense fallback={null}>
+        {players.map((p, i) => {
+          // Apply same visual offset to players
+          const [x, y] = getBoardPosition((p.position + 9) % 36);
+          return (
+              <SmoothPlayerToken
+                  key={p.id}
+                  playerIndex={i}
+                  color={p.color}
+                  modelUrl={p.modelUrl}
+                  targetPosition={[x, y, 0.1]}
+              />
+          )
+        })}
+      </Suspense>
     </group>
   );
 };
