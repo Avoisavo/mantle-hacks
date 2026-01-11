@@ -49,6 +49,7 @@ export default function GamePage() {
     const [movementQueue, setMovementQueue] = useState<number[]>([]);
     const [isRollHovered, setIsRollHovered] = useState(false);
     const [inspectedAsset, setInspectedAsset] = useState<Asset | null>(null);
+    const [cameraMode, setCameraMode] = useState<'default' | 'side'>('default');
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex];
     const humanPlayer = gameState.players.find(p => p.id === '1')!;
@@ -103,7 +104,13 @@ export default function GamePage() {
                     return { ...prev, players: newPlayers };
                 });
                 setMovementQueue(prev => prev.slice(1));
-                if (movementQueue.length === 1) setShowAssetOverlay(true);
+                if (movementQueue.length === 1) {
+                    // Show asset overlay after movement completes and camera transitions back
+                    setTimeout(() => {
+                        setShowAssetOverlay(true);
+                        setCameraMode('default');
+                    }, 800);
+                }
             }, 400);
             return () => clearTimeout(timer);
         }
@@ -126,6 +133,8 @@ export default function GamePage() {
             }
             addLog(currentPlayer.name, `Rolled a ${roll}!`, 'MOVEMENT');
             setMovementQueue(path);
+            // Switch to side camera after dice roll
+            setCameraMode('side');
         }, 800);
     }, [currentPlayer, gameState.assets.length, isRolling, showAssetOverlay, addLog, showCustomizer, movementQueue.length, gameState.status]);
 
@@ -230,7 +239,7 @@ export default function GamePage() {
                             />
 
                         </SplineEnvironment>
-                        <CameraRig isRolling={isRolling} />
+                        <CameraRig isRolling={isRolling} cameraMode={cameraMode} currentPlayer={currentPlayer} />
                     </Suspense>
                 </Canvas>
                 <Loader />
