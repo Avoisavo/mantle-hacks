@@ -37,20 +37,11 @@ const SmoothPlayerToken: React.FC<{
   }, [targetPosition, offset]);
 
   // Handle smooth movement frame-by-frame
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (groupRef.current) {
-      // Lerp current position to target
-      groupRef.current.position.lerp(targetVec, 12 * delta);
-      
-      // Add a bounce effect based on movement or idleness
-      const bounce = Math.sin(state.clock.elapsedTime * 3 + playerIndex) * 0.08;
-      // We apply the bounce to the visual mesh container, but here we can just crudely add it to Z
-      // Note: Since the parent board is Z-up, "z" is height.
-      // However, lerp fights this if we set it directly. 
-      // Better to offset the child mesh or use a spring. 
-      // For simplicity, we assume the Z in targetVec is 0.1, so we can just let lerp handle the base, 
-      // and maybe apply bounce in the inner group? 
-      // Let's stick to simple lerp for position, and bounce the visible child.
+      // Lerp current position to target with a fixed speed for consistency
+      const lerpFactor = Math.min(15 * delta, 1.0);
+      groupRef.current.position.lerp(targetVec, lerpFactor);
     }
   });
 
@@ -65,8 +56,8 @@ const SmoothPlayerToken: React.FC<{
   const modelRef = useRef<THREE.Group>(null);
   useFrame((state) => {
       if (modelRef.current) {
-          // Subtle idle stain/breathing
-          modelRef.current.position.y = Math.sin(state.clock.elapsedTime * 3 + playerIndex) * 0.05;
+          // Reduced idle animation - very subtle breathing
+          modelRef.current.position.y = Math.sin(state.clock.elapsedTime * 2 + playerIndex) * 0.02;
       }
   });
 
@@ -205,6 +196,8 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
         const [x, y] = getBoardPosition((i + 9) % 36);
         const isOccupied = players.some(p => p.position === i);
         const color = asset.ownerId ? '#A855F7' : (isOccupied ? '#F59E0B' : '#FFFFFF');
+        // Display index: tile 1 should be at current position 10, so we shift by 10
+        const displayIndex = (i) % 36;
 
         return (
           <group key={asset.id} position={[x, y, 0]}>
@@ -216,6 +209,25 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
               <boxGeometry args={[1.2, 1.2, 0.2]} />
               <meshBasicMaterial color={color} />
             </mesh>
+
+            {/* Number label - skip the first tile (index 0) */}
+            {displayIndex !== 0 && (
+              <Html
+                position={[0, 0, 0.3]}
+                center
+                distanceFactor={4}
+                style={{
+                  color: '#000000',
+                  fontSize: '6px',
+                  fontWeight: 'bold',
+                  textShadow: '1px 1px 2px rgba(255,255,255,0.8)',
+                  pointerEvents: 'none',
+                  userSelect: 'none'
+                }}
+              >
+                {displayIndex}
+              </Html>
+            )}
           </group>
         );
       })}
