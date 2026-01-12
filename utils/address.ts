@@ -1,10 +1,13 @@
-// Contract addresses on Mantle Sepolia
-export const TOWN_TOPUP_ADDRESS = "0x6f09B2607888641410Da21cF6eD9877fa8a8CaFc";
-export const TOWN_TOKEN_ADDRESS = "0x62DfD1ED7d2d2fc05DA721b860Ea42F0Bb50b569";
+// ========================================
+// Mantle Sepolia Testnet Addresses
+// ========================================
+// NFT Contract (Downing St Apartment)
+export const MY_NFT_ADDRESS = "0x1a500eCFfEF02e32de2f1dFdC30b407D392B3f4D";
 
-// SepoliaMNT Token on Ethereum Sepolia (bridged MNT)
-export const SEPOLIA_MNT_TOKEN_ADDRESS = "0x65e37B558F64E2Be5768DB46DF22F93d85741A9E";
+// TownTopUp System on Mantle Sepolia
+export const TOWN_TOPUP_MANTLE_ADDRESS = "0xA3bD2356b1f2E4543912cA574aC692876d5b1456";
+export const TOWN_TOKEN_MANTLE_ADDRESS = "0x22CEc1678Ab59cbb8D53eCB78C1777730fEB6495";
 
-// Contract addresses on Ethereum Sepolia (for SepoliaMNT -> TOWN conversion)
-export const TOWN_TOPUP_ERC20_ADDRESS = "0x2e99559aE2d30dF514559C883Cfb9997f82a39bf";
-export const TOWN_TOKEN_SEPOLIA_ADDRESS = "0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49";
+// MNT Token on Mantle Sepolia
+export const MNT_TOKEN_ADDRESS = "0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17";
+

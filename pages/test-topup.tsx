@@ -3,36 +3,37 @@ import { useAccount, useWriteContract, useReadContract } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
-    SEPOLIA_MNT_TOKEN_ADDRESS,
-    TOWN_TOPUP_ERC20_ADDRESS,
-    TOWN_TOKEN_SEPOLIA_ADDRESS
+    MNT_TOKEN_ADDRESS,
+    TOWN_TOPUP_MANTLE_ADDRESS,
+    TOWN_TOKEN_MANTLE_ADDRESS
 } from "@/utils/address";
-import { ABI as TownTopUpERC20ABI, ERC20_ABI } from "@/utils/towntopupERC20";
+import { ABI as TownTopUpABI } from "@/utils/towntop";
 import { ABI as TownTokenABI } from "@/utils/towntoken";
-import { sepolia } from "wagmi/chains";
+import { ERC20_ABI } from "@/utils/erc20";
+import { mantleSepoliaTestnet } from "wagmi/chains";
 
-// Ethereum Sepolia Chain ID
-const CHAIN_ID = sepolia.id; // 11155111
+// Mantle Sepolia Chain ID
+const CHAIN_ID = mantleSepoliaTestnet.id; // 5003
 
-export default function TestTopUpSepolia() {
+export default function TestTopUpMantle() {
     const [mntAmount, setMntAmount] = useState("0.1");
     const [status, setStatus] = useState("");
     const [needsApproval, setNeedsApproval] = useState(true);
 
-    const { address, isConnected } = useAccount();
+    const { address, isConnected, chain } = useAccount();
 
-    // Get SepoliaMNT balance
-    const { data: sepoliaMntBalance, refetch: refetchMntBalance } = useReadContract({
-        address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
+    // Get MNT token balance (ERC20)
+    const { data: mntBalance, refetch: refetchMntBalance } = useReadContract({
+        address: MNT_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
         chainId: CHAIN_ID,
     });
 
-    // Get TOWN balance (on Sepolia)
+    // Get TOWN balance (on Mantle Sepolia)
     const { data: townBalance, refetch: refetchTownBalance } = useReadContract({
-        address: TOWN_TOKEN_SEPOLIA_ADDRESS as `0x${string}`,
+        address: TOWN_TOKEN_MANTLE_ADDRESS as `0x${string}`,
         abi: TownTokenABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
@@ -41,17 +42,17 @@ export default function TestTopUpSepolia() {
 
     // Get current allowance
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
+        address: MNT_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "allowance",
-        args: address ? [address, TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`] : undefined,
+        args: address ? [address, TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`] : undefined,
         chainId: CHAIN_ID,
     });
 
     // Get conversion rate
     const { data: rate } = useReadContract({
-        address: TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`,
-        abi: TownTopUpERC20ABI,
+        address: TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`,
+        abi: TownTopUpABI,
         functionName: "RATE",
         chainId: CHAIN_ID,
     });
@@ -69,12 +70,12 @@ export default function TestTopUpSepolia() {
 
     const handleApprove = async () => {
         try {
-            setStatus("Approving SepoliaMNT...");
+            setStatus("Approving MNT...");
             writeContract({
-                address: SEPOLIA_MNT_TOKEN_ADDRESS as `0x${string}`,
+                address: MNT_TOKEN_ADDRESS as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "approve",
-                args: [TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`, parseEther("1000000")], // Approve large amount
+                args: [TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`, parseEther("1000000")], // Approve large amount
                 chainId: CHAIN_ID,
             }, {
                 onSuccess: () => {
@@ -100,8 +101,8 @@ export default function TestTopUpSepolia() {
         try {
             setStatus("Buying TOWN...");
             writeContract({
-                address: TOWN_TOPUP_ERC20_ADDRESS as `0x${string}`,
-                abi: TownTopUpERC20ABI,
+                address: TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`,
+                abi: TownTopUpABI,
                 functionName: "buyTOWN",
                 args: [parseEther(mntAmount)],
                 chainId: CHAIN_ID,
@@ -121,6 +122,10 @@ export default function TestTopUpSepolia() {
     };
 
     const expectedTown = parseFloat(mntAmount || "0") * 50;
+
+    // Check if on wrong network
+    const isWrongNetwork = isConnected && chain?.id !== CHAIN_ID;
+    const hasMntBalance = mntBalance && (mntBalance as bigint) > 0n;
 
     return (
         <div style={{
@@ -143,7 +148,7 @@ export default function TestTopUpSepolia() {
                     marginBottom: "10px",
                     textAlign: "center",
                 }}>
-                    🏘️ TownTopUp (Ethereum Sepolia)
+                    🏘️ TownTopUp (Mantle Sepolia)
                 </h1>
                 <p style={{
                     color: "#10b981",
@@ -151,14 +156,14 @@ export default function TestTopUpSepolia() {
                     marginBottom: "10px",
                     fontSize: "14px",
                 }}>
-                    Convert SepoliaMNT → TOWN
+                    Convert MNT → TOWN
                 </p>
                 <p style={{
                     color: "#888",
                     textAlign: "center",
                     marginBottom: "30px",
                 }}>
-                    1 SepoliaMNT = 50 TOWN
+                    1 MNT = 50 TOWN
                 </p>
 
                 {/* Connect Wallet */}
@@ -166,7 +171,22 @@ export default function TestTopUpSepolia() {
                     <ConnectButton />
                 </div>
 
-                {isConnected && (
+                {/* Wrong Network Warning */}
+                {isWrongNetwork && (
+                    <div style={{
+                        background: "rgba(251, 191, 36, 0.2)",
+                        borderRadius: "12px",
+                        padding: "15px",
+                        marginBottom: "20px",
+                        border: "1px solid rgba(251, 191, 36, 0.3)",
+                    }}>
+                        <p style={{ color: "#fbbf24", fontSize: "14px", margin: 0 }}>
+                            ⚠️ Please switch to Mantle Sepolia Testnet (Chain ID: 5003)
+                        </p>
+                    </div>
+                )}
+
+                {isConnected && !isWrongNetwork && (
                     <>
                         {/* Balances */}
                         <div style={{
@@ -177,9 +197,9 @@ export default function TestTopUpSepolia() {
                         }}>
                             <h3 style={{ color: "#10b981", marginBottom: "15px", fontSize: "14px" }}>Your Balances</h3>
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span style={{ color: "#888" }}>SepoliaMNT:</span>
+                                <span style={{ color: "#888" }}>MNT:</span>
                                 <span style={{ color: "#10b981", fontWeight: "bold" }}>
-                                    {sepoliaMntBalance ? parseFloat(formatEther(sepoliaMntBalance as bigint)).toFixed(4) : "0"} MNT
+                                    {mntBalance ? parseFloat(formatEther(mntBalance as bigint)).toFixed(4) : "0"} MNT
                                 </span>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -190,6 +210,33 @@ export default function TestTopUpSepolia() {
                             </div>
                         </div>
 
+                        {/* Zero Balance Warning */}
+                        {!hasMntBalance && (
+                            <div style={{
+                                background: "rgba(59, 130, 246, 0.2)",
+                                borderRadius: "12px",
+                                padding: "15px",
+                                marginBottom: "20px",
+                                border: "1px solid rgba(59, 130, 246, 0.3)",
+                            }}>
+                                <p style={{ color: "#3b82f6", fontSize: "14px", margin: "0 0 10px 0" }}>
+                                    💧 You need MNT tokens to buy TOWN!
+                                </p>
+                                <a
+                                    href="https://faucet.testnet.mantle.xyz/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        color: "#60a5fa",
+                                        fontSize: "13px",
+                                        textDecoration: "underline",
+                                    }}
+                                >
+                                    Get MNT from Mantle Faucet →
+                                </a>
+                            </div>
+                        )}
+
                         {/* Conversion Rate */}
                         <div style={{
                             background: "rgba(16, 185, 129, 0.1)",
@@ -199,14 +246,14 @@ export default function TestTopUpSepolia() {
                             textAlign: "center",
                         }}>
                             <span style={{ color: "#10b981", fontSize: "14px" }}>
-                                Rate: 1 SepoliaMNT = {rate ? rate.toString() : "50"} TOWN
+                                Rate: 1 MNT = {rate ? rate.toString() : "50"} TOWN
                             </span>
                         </div>
 
                         {/* Input */}
                         <div style={{ marginBottom: "20px" }}>
                             <label style={{ color: "#888", fontSize: "14px", display: "block", marginBottom: "8px" }}>
-                                Amount (SepoliaMNT)
+                                Amount (MNT)
                             </label>
                             <input
                                 type="number"
@@ -253,7 +300,7 @@ export default function TestTopUpSepolia() {
                                     marginBottom: "10px",
                                 }}
                             >
-                                {isPending ? "Approving..." : "1. Approve SepoliaMNT"}
+                                {isPending ? "Approving..." : "1. Approve MNT"}
                             </button>
                         )}
 
@@ -311,9 +358,9 @@ export default function TestTopUpSepolia() {
                             fontSize: "11px",
                             color: "#666",
                         }}>
-                            <p style={{ marginBottom: "5px" }}>TownTopUpERC20: {TOWN_TOPUP_ERC20_ADDRESS}</p>
-                            <p style={{ marginBottom: "5px" }}>TownToken: {TOWN_TOKEN_SEPOLIA_ADDRESS}</p>
-                            <p>SepoliaMNT: {SEPOLIA_MNT_TOKEN_ADDRESS}</p>
+                            <p style={{ marginBottom: "5px" }}>TownTopUp: {TOWN_TOPUP_MANTLE_ADDRESS}</p>
+                            <p style={{ marginBottom: "5px" }}>TownToken: {TOWN_TOKEN_MANTLE_ADDRESS}</p>
+                            <p>MNT Token: {MNT_TOKEN_ADDRESS}</p>
                         </div>
                     </>
                 )}

@@ -1,7 +1,7 @@
 {
-    "name": "Manhattan",
-    "description": "This is my awesome NFT on Sepolia testnet!",
-    "image": "https://your-image-url-here.com/image.png",
+    "name": "Downing St Apartment",
+    "description": "Assets in Soho, Manhattan",
+    "image": "https://chocolate-many-grasshopper-591.mypinata.cloud/ipfs/bafkreihpzrqxjhbobedb74djp4mzjqqfquwuzx5iplty74yrtjm2573x44",
     "attributes": [
         {
             "trait_type": "Background",

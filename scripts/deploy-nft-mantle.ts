@@ -1,6 +1,6 @@
 /**
- * Deploy MyNFT contract and mint the first NFT
- * Run: npx hardhat run scripts/deploy-and-mint-nft.ts --network sepolia
+ * Deploy MyNFT contract to Mantle Sepolia and mint the first NFT
+ * Run: npx ts-node scripts/deploy-nft-mantle.ts
  */
 
 import { ethers } from "ethers";
@@ -9,36 +9,34 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
-const RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+// Mantle Sepolia RPC
+const RPC = "https://rpc.sepolia.mantle.xyz";
+const CHAIN_ID = 5003;
 
-// ============================================
-// 🎨 CUSTOMIZE YOUR NFT HERE
-// ============================================
-
-// NFT Collection Name and Symbol (shown on OpenSea/Etherscan)
-// To change these, you need to modify the contract in contracts/mynft.sol:
-//   constructor() ERC721("MyNFT", "MNFT") Ownable(msg.sender) {}
-//                        ↑ Name   ↑ Symbol
-
-// NFT Metadata URL - This is where your NFT's name and image come from!
-// Host this JSON file online (IPFS, Pinata, or any public URL)
+// NFT Metadata URL - customize this!
 const TOKEN_URI = "https://chocolate-many-grasshopper-591.mypinata.cloud/ipfs/QmYourMetadataHash";
-// ============================================
 
 async function main() {
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
-    if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY not set");
+    if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY not set in .env.local");
 
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: 11155111, name: "sepolia" });
+    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
     const wallet = new ethers.Wallet(privateKey, provider);
 
-    console.log(`Deployer: ${wallet.address}\n`);
+    console.log(`Deployer: ${wallet.address}`);
+
+    const balance = await provider.getBalance(wallet.address);
+    console.log(`Balance: ${ethers.formatEther(balance)} MNT\n`);
+
+    if (balance === 0n) {
+        throw new Error("Deployer has no MNT on Mantle Sepolia. Get some from the faucet first.");
+    }
 
     // Load artifact
     const artifact = JSON.parse(readFileSync("./artifacts/contracts/mynft.sol/MyNFT.json", "utf8"));
 
     // ========== STEP 1: Deploy Contract ==========
-    console.log("📦 Deploying MyNFT contract...");
+    console.log("📦 Deploying MyNFT contract to Mantle Sepolia...");
     const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
     const contract = await factory.deploy();
     await contract.waitForDeployment();
@@ -66,8 +64,8 @@ async function main() {
     console.log(`Contract Address: ${contractAddress}`);
     console.log(`Token ID: ${tokenId}`);
     console.log(`Owner: ${wallet.address}`);
-    console.log(`\nView on OpenSea: https://testnets.opensea.io/assets/sepolia/${contractAddress}/${tokenId}`);
-    console.log(`View on Etherscan: https://sepolia.etherscan.io/address/${contractAddress}`);
+    console.log(`\nView on Mantle Explorer: https://sepolia.mantlescan.xyz/address/${contractAddress}`);
+    console.log(`Token page: https://sepolia.mantlescan.xyz/token/${contractAddress}/instance/${tokenId}`);
 }
 
 main().catch(console.error);
