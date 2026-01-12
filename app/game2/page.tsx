@@ -29,7 +29,26 @@ export default function Game2Page() {
 
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87ceeb);
+        // Darker starry night background with gradient effect and blur
+        const canvas = document.createElement('canvas');
+        canvas.width = 2;
+        canvas.height = 512;
+        const context = canvas.getContext('2d');
+        if (context) {
+            const gradient = context.createLinearGradient(0, 0, 0, 512);
+            gradient.addColorStop(0, '#000000');
+            gradient.addColorStop(0.3, '#05000a');
+            gradient.addColorStop(0.5, '#0a0010');
+            gradient.addColorStop(0.7, '#05000a');
+            gradient.addColorStop(1, '#000000');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 2, 512);
+        }
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+        scene.background = texture;
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
         // Camera setup
         const camera = new THREE.PerspectiveCamera(
@@ -43,11 +62,15 @@ export default function Game2Page() {
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({
             canvas: canvasRef.current,
-            antialias: true
+            antialias: true,
+            alpha: true
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
 
         // Orbit Controls
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -69,6 +92,102 @@ export default function Game2Page() {
         const pointLight = new THREE.PointLight(0xffffff, 0.5);
         pointLight.position.set(-5, 5, -5);
         scene.add(pointLight);
+
+        // Add purple/pink lights for the night theme
+        const purpleLight = new THREE.PointLight(0xff00ff, 1, 50);
+        purpleLight.position.set(10, 10, 10);
+        scene.add(purpleLight);
+
+        const pinkLight = new THREE.PointLight(0x8b00ff, 1, 50);
+        pinkLight.position.set(-10, 10, -10);
+        scene.add(pinkLight);
+
+        // Create circular star texture
+        const starCanvas = document.createElement('canvas');
+        starCanvas.width = 32;
+        starCanvas.height = 32;
+        const starContext = starCanvas.getContext('2d');
+        if (starContext) {
+            const gradient = starContext.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            starContext.fillStyle = gradient;
+            starContext.fillRect(0, 0, 32, 32);
+        }
+        const starTexture = new THREE.CanvasTexture(starCanvas);
+
+        // Create stars with blur effect
+        const starsGeometry = new THREE.BufferGeometry();
+        const starPositions = [];
+        const starSizes = [];
+        for (let i = 0; i < 1500; i++) {
+            const x = (Math.random() - 0.5) * 300;
+            const y = (Math.random() - 0.5) * 300 + 100;
+            const z = (Math.random() - 0.5) * 300;
+            starPositions.push(x, y, z);
+            starSizes.push(Math.random() * 1.5 + 0.5);
+        }
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+        starsGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
+
+        // Create a custom shader material for blurry stars
+        const starsMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 1.5,
+            map: starTexture,
+            transparent: true,
+            opacity: 0.8,
+            sizeAttenuation: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // Create floating planets
+        const planets: Array<{ mesh: THREE.Mesh; speed: number; rotationSpeed: number; distance: number; angle: number; baseY: number; material?: THREE.MeshStandardMaterial }> = [];
+
+        // Planet 1 - Large Purple planet with blinking effect
+        const planet1Geometry = new THREE.SphereGeometry(15, 32, 32);
+        const planet1Material = new THREE.MeshStandardMaterial({
+            color: 0x8b00ff,
+            emissive: 0x4a0080,
+            emissiveIntensity: 0.5,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const planet1 = new THREE.Mesh(planet1Geometry, planet1Material);
+        planet1.position.set(60, 25, -80);
+        scene.add(planet1);
+        planets.push({ mesh: planet1, speed: 0.0001, rotationSpeed: 0.002, distance: 60, angle: 0, baseY: 25, material: planet1Material });
+
+        // Planet 2 - Pink planet with ring (closer)
+        const planet2Geometry = new THREE.SphereGeometry(7, 32, 32);
+        const planet2Material = new THREE.MeshStandardMaterial({
+            color: 0xff69b4,
+            emissive: 0xff1493,
+            emissiveIntensity: 0.4,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const planet2 = new THREE.Mesh(planet2Geometry, planet2Material);
+        planet2.position.set(-50, 35, -60);
+
+        // Add ring to planet 2
+        const ringGeometry = new THREE.RingGeometry(9, 12, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.8
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = Math.PI / 3;
+        planet2.add(ring);
+        scene.add(planet2);
+        planets.push({ mesh: planet2, speed: 0.00015, rotationSpeed: 0.003, distance: 50, angle: Math.PI, baseY: 35 });
 
         // GLTF Loader
         const loader = new GLTFLoader();
@@ -272,9 +391,25 @@ export default function Game2Page() {
         function animate() {
             requestAnimationFrame(animate);
 
+            const time = Date.now() * 0.001;
+
+            // Update planets - rotate and float
+            planets.forEach(planet => {
+                planet.angle += planet.speed;
+                planet.mesh.rotation.y += planet.rotationSpeed;
+                planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
+                planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
+                planet.mesh.position.y = planet.baseY + Math.sin(planet.angle * 2) * 5; // Add gentle bobbing motion
+
+                // Add blinking effect to purple planet
+                if (planet.material) {
+                    planet.material.emissiveIntensity = 0.3 + Math.sin(time * 3) * 0.3;
+                }
+            });
+
             // Update camera to follow character with rotation
             if (character) {
-                const distance = 2;
+                const distance = 2.5;
                 const angle20 = (20 * Math.PI) / 180; // 20 degrees in radians
                 const offset = new THREE.Vector3(
                     -distance * Math.cos(angle20),
@@ -357,7 +492,16 @@ export default function Game2Page() {
     }, []);
 
     return (
-        <div ref={containerRef} className="h-screen w-full bg-[#87CEEB] overflow-hidden relative">
+        <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
+            background: 'linear-gradient(135deg, #000000 0%, #05000a 30%, #0a0010 50%, #05000a 70%, #000000 100%)'
+        }}>
+            {/* Background blur layer */}
+            <div className="absolute inset-0" style={{
+                background: 'inherit',
+                filter: 'blur(1px)',
+                zIndex: 0
+            }}></div>
+
             <div id="loading" className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl font-bold z-10">
                 Loading...
             </div>
@@ -378,7 +522,7 @@ export default function Game2Page() {
                 </button>
             </div>
 
-            <canvas ref={canvasRef} className="block" />
+            <canvas ref={canvasRef} className="block relative z-1" />
         </div>
     );
 }
