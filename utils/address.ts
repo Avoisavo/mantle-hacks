@@ -1,8 +1,8 @@
 // ========================================
 // Mantle Sepolia Testnet Addresses
 // ========================================
-// NFT Contract (Downing St Apartment)
-export const MY_NFT_ADDRESS = "0x1a500eCFfEF02e32de2f1dFdC30b407D392B3f4D";
+// NFT Contract (Downing St Apartment) - PUBLIC MINT
+export const MY_NFT_ADDRESS = "0x3B73Aa8c41e814424EE9f557D25282e1c7FCa23F";
 
 // MNT Token on Mantle Sepolia
 export const MNT_TOKEN_ADDRESS = "0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17";

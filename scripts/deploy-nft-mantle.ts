@@ -14,7 +14,7 @@ const RPC = "https://rpc.sepolia.mantle.xyz";
 const CHAIN_ID = 5003;
 
 // NFT Metadata URL - customize this!
-const TOKEN_URI = "https://chocolate-many-grasshopper-591.mypinata.cloud/ipfs/QmYourMetadataHash";
+const TOKEN_URI = "https://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fjdcny.com%2Fbuilding%2Fmanhattan-house%2F&ved=0CBYQjRxqFwoTCMiA8pzshZIDFQAAAAAdAAAAABAH&opi=89978449";
 
 async function main() {
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
