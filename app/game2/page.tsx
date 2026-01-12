@@ -273,7 +273,13 @@ export default function Game2Page() {
 
             // Update camera to follow character with rotation
             if (character) {
-                const offset = new THREE.Vector3(-1.5, 0.5, -1.5);
+                const distance = 2;
+                const angle20 = (20 * Math.PI) / 180; // 20 degrees in radians
+                const offset = new THREE.Vector3(
+                    -distance * Math.cos(angle20),
+                    0.5,
+                    -distance * Math.sin(angle20)
+                );
                 offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                 camera.position.copy(character.position).add(offset);
                 controls.target.copy(character.position);
