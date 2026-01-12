@@ -240,6 +240,7 @@ export default function Game2Page() {
 
         let currentPosition = 0;
         let currentRotation = 0;
+        let hasStarted = false;
 
         loader.load(
             '/game2/greenguy.glb',
@@ -298,13 +299,14 @@ export default function Game2Page() {
             if (!character) return;
 
             for (let i = 0; i < steps; i++) {
-                const prevPosition = currentPosition;
                 currentPosition = (currentPosition + 1) % tilePositions.length;
                 const targetPos = tilePositions[currentPosition];
 
-                // Check if we're at a corner (every 9th position: 8, 17, 26, 35)
-                const corners = [8, 17, 26, 35];
-                const needsRotation = corners.includes(currentPosition);
+                // Check if we're at a corner (positions at end of each side, including start at 0)
+                const corners = [0, 8, 16, 24];
+                // Don't rotate if it's the very first move (hasStarted is false)
+                const needsRotation = corners.includes(currentPosition) && hasStarted;
+                hasStarted = true;
 
                 await new Promise<void>((resolve) => {
                     const startPos = character!.position.clone();
