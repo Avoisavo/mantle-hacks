@@ -57,7 +57,15 @@ export default function Game2Page() {
             0.1,
             1000
         );
-        camera.position.set(-7, 11.5, -7);
+
+        // Initial camera position for intro animation (high above, looking down)
+        camera.position.set(0, 30, 0);
+        const targetCameraPosition = new THREE.Vector3(-7, 11.5, -7);
+        let introAnimationTime = -1; // Start with -1 to create 1 second delay
+        const phase1Duration = 3; // seconds
+        const phase2Duration = 1.5; // seconds
+        let introComplete = false;
+        let secondPhaseStarted = false;
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({
@@ -149,6 +157,59 @@ export default function Game2Page() {
         // Create floating planets
         const planets: Array<{ mesh: THREE.Mesh; speed: number; rotationSpeed: number; distance: number; angle: number; baseY: number; material?: THREE.MeshStandardMaterial }> = [];
 
+        // Create 3D "Cointown" text using canvas texture
+        const textCanvas = document.createElement('canvas');
+        const textCtx = textCanvas.getContext('2d');
+        const textWidth = 1024;
+        const textHeight = 256;
+        textCanvas.width = textWidth;
+        textCanvas.height = textHeight;
+
+        if (textCtx) {
+            // Clear with transparent background
+            textCtx.clearRect(0, 0, textWidth, textHeight);
+
+            // Draw text with 3D effect layers
+            const text = 'Cointown';
+            const fontSize = 140;
+            textCtx.font = `bold ${fontSize}px Arial, sans-serif`;
+            textCtx.textAlign = 'center';
+            textCtx.textBaseline = 'middle';
+
+            // Draw shadow layers for 3D effect
+            const shadowColor = '#8B5CF6';
+            const glowColor = '#A78BFA';
+            const offsets = [8, 6, 4, 2];
+            offsets.forEach((offset, index) => {
+                textCtx.fillStyle = index < 2 ? glowColor : shadowColor;
+                textCtx.fillText(text, textWidth / 2 + offset, textHeight / 2 + offset);
+            });
+
+            // Draw main text with gold color
+            textCtx.fillStyle = '#FFD700';
+            textCtx.fillText(text, textWidth / 2, textHeight / 2);
+
+            // Add glow effect
+            textCtx.shadowColor = '#FFD700';
+            textCtx.shadowBlur = 20;
+            textCtx.fillText(text, textWidth / 2, textHeight / 2);
+        }
+
+        const textTexture = new THREE.CanvasTexture(textCanvas);
+        textTexture.needsUpdate = true;
+        const textGeometry = new THREE.PlaneGeometry(30, 7.5);
+        const textMaterial = new THREE.MeshBasicMaterial({
+            map: textTexture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.set(0, 29.5, -10); // Position slightly below camera and in front
+        textMesh.rotation.x = -0.3; // Tilt to face the camera better
+        textMesh.renderOrder = 1; // Render on top
+        scene.add(textMesh);
+
         // Planet 1 - Large Purple planet with blinking effect
         const planet1Geometry = new THREE.SphereGeometry(15, 32, 32);
         const planet1Material = new THREE.MeshStandardMaterial({
@@ -198,7 +259,14 @@ export default function Game2Page() {
             loadedCount++;
             if (loadedCount >= totalModels) {
                 const loadingEl = document.getElementById('loading');
-                if (loadingEl) loadingEl.style.display = 'none';
+                if (loadingEl) {
+                    // Fade out the loading text after models are loaded
+                    loadingEl.style.transition = 'opacity 0.5s ease-out';
+                    loadingEl.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingEl.style.display = 'none';
+                    }, 500);
+                }
             }
         }
 
@@ -392,6 +460,74 @@ export default function Game2Page() {
             requestAnimationFrame(animate);
 
             const time = Date.now() * 0.001;
+            const deltaTime = 0.016; // Approximate 60fps
+
+            // Intro camera animation
+            if (!introComplete) {
+                introAnimationTime += deltaTime;
+
+                // Hide loading text when animation starts (after 1 second delay)
+                if (introAnimationTime >= 0 && introAnimationTime < 0.1) {
+                    textMesh.visible = false;
+                }
+
+                // Wait for 1 second delay before starting animation
+                if (introAnimationTime < 0) {
+                    return; // Keep camera at (0, 30, 0) during delay
+                }
+
+                // Phase 1: Move from (0, 30, 0) to (-7, 11.5, -7) - 3 seconds
+                if (introAnimationTime < phase1Duration) {
+                    const progress = introAnimationTime / phase1Duration;
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+
+                    camera.position.lerpVectors(
+                        new THREE.Vector3(0, 30, 0),
+                        targetCameraPosition,
+                        easeOut
+                    );
+
+                    controls.target.lerp(new THREE.Vector3(0, 10.6, 0), easeOut);
+                }
+                // Phase 2: Move from (-7, 11.5, -7) to 20-degree position - 2 seconds
+                else if (introAnimationTime < phase1Duration + phase2Duration) {
+                    if (!secondPhaseStarted) {
+                        secondPhaseStarted = true;
+                    }
+
+                    const progress = (introAnimationTime - phase1Duration) / phase2Duration;
+                    // Smoother ease-in-out function
+                    const easeInOut = progress < 0.5
+                        ? 4 * progress * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                    // Calculate target camera position (20-degree angle from character)
+                    const distance = 2.5;
+                    const angle20 = (20 * Math.PI) / 180;
+                    const targetPos = new THREE.Vector3(
+                        -distance * Math.cos(angle20),
+                        0.5,
+                        -distance * Math.sin(angle20)
+                    );
+
+                    if (character) {
+                        targetPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                        targetPos.add(character.position);
+                    }
+
+                    camera.position.lerpVectors(
+                        targetCameraPosition,
+                        targetPos,
+                        easeInOut
+                    );
+
+                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 11, 0);
+                    controls.target.lerp(targetLookAt, easeInOut);
+                } else {
+                    // Animation complete
+                    introComplete = true;
+                }
+            }
 
             // Update planets - rotate and float
             planets.forEach(planet => {
@@ -407,8 +543,8 @@ export default function Game2Page() {
                 }
             });
 
-            // Update camera to follow character with rotation
-            if (character) {
+            // Update camera to follow character with rotation (only after intro)
+            if (introComplete && character) {
                 const distance = 2.5;
                 const angle20 = (20 * Math.PI) / 180; // 20 degrees in radians
                 const offset = new THREE.Vector3(
@@ -434,14 +570,15 @@ export default function Game2Page() {
             if (!character) return;
 
             for (let i = 0; i < steps; i++) {
-                currentPosition = (currentPosition + 1) % tilePositions.length;
-                const targetPos = tilePositions[currentPosition];
+                const nextPosition = (currentPosition + 1) % tilePositions.length;
+                const targetPos = tilePositions[nextPosition];
 
-                // Check if we're at a corner (positions at end of each side, including start at 0)
+                // Check if the next position is a corner (need to rotate when arriving at corners 8, 16, 24, 0)
                 const corners = [0, 8, 16, 24];
-                // Don't rotate if it's the very first move (hasStarted is false)
-                const needsRotation = corners.includes(currentPosition) && hasStarted;
-                hasStarted = true;
+                // Don't rotate if it's the very first move (starting at position 0 and moving to 1)
+                // Special case: if we're at position 31 and moving to 0, we DO need to rotate
+                const isCompletingLoop = currentPosition === 31 && nextPosition === 0;
+                const needsRotation = corners.includes(nextPosition) && (hasStarted || isCompletingLoop);
 
                 await new Promise<void>((resolve) => {
                     const startPos = character!.position.clone();
@@ -462,6 +599,8 @@ export default function Game2Page() {
                             requestAnimationFrame(animateMove);
                         } else {
                             currentRotation = targetRot;
+                            currentPosition = nextPosition;
+                            hasStarted = true;
                             resolve();
                         }
                     }
@@ -502,12 +641,8 @@ export default function Game2Page() {
                 zIndex: 0
             }}></div>
 
-            <div id="loading" className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl font-bold z-10">
-                Loading...
-            </div>
-
             {/* Dice Roll Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-30">
                 {diceValue !== null && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-lg px-8 py-4 shadow-lg">
                         <p className="text-3xl font-bold text-gray-800">Rolled: {diceValue}</p>
