@@ -1,0 +1,15 @@
+{
+    "name": "My First NFT",
+    "description": "This is my awesome NFT on Sepolia testnet!",
+    "image": "https://your-image-url-here.com/image.png",
+    "attributes": [
+        {
+            "trait_type": "Background",
+            "value": "Blue"
+        },
+        {
+            "trait_type": "Rarity",
+            "value": "Common"
+        }
+    ]
+}
