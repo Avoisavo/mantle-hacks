@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useReadContract } from "wagmi";
+import { useState } from "react";
+import { useAccount, useWriteContract, useReadContract, useBalance } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
-    MNT_TOKEN_ADDRESS,
+    TOWN_TOPUP_NATIVE_ADDRESS,
+    TOWN_TOKEN_NATIVE_ADDRESS,
     TOWN_TOPUP_MANTLE_ADDRESS,
-    TOWN_TOKEN_MANTLE_ADDRESS
+    TOWN_TOKEN_MANTLE_ADDRESS,
+    MNT_TOKEN_ADDRESS
 } from "@/utils/address";
-import { ABI as TownTopUpABI } from "@/utils/towntop";
+import { ABI as TownTopUpNativeABI } from "@/utils/towntopnative";
 import { ABI as TownTokenABI } from "@/utils/towntoken";
-import { ERC20_ABI } from "@/utils/erc20";
 import { mantleSepoliaTestnet } from "wagmi/chains";
 
 // Mantle Sepolia Chain ID
@@ -18,106 +19,72 @@ const CHAIN_ID = mantleSepoliaTestnet.id; // 5003
 export default function TestTopUpMantle() {
     const [mntAmount, setMntAmount] = useState("0.1");
     const [status, setStatus] = useState("");
-    const [needsApproval, setNeedsApproval] = useState(true);
 
     const { address, isConnected, chain } = useAccount();
 
-    // Get MNT token balance (ERC20)
-    const { data: mntBalance, refetch: refetchMntBalance } = useReadContract({
-        address: MNT_TOKEN_ADDRESS as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: address ? [address] : undefined,
+    // Get native MNT balance
+    const { data: nativeBalance, refetch: refetchNativeBalance } = useBalance({
+        address: address,
         chainId: CHAIN_ID,
     });
 
-    // Get TOWN balance (on Mantle Sepolia)
+    // Get TOWN balance
     const { data: townBalance, refetch: refetchTownBalance } = useReadContract({
-        address: TOWN_TOKEN_MANTLE_ADDRESS as `0x${string}`,
+        address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
         abi: TownTokenABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
         chainId: CHAIN_ID,
     });
 
-    // Get current allowance
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: MNT_TOKEN_ADDRESS as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "allowance",
-        args: address ? [address, TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`] : undefined,
-        chainId: CHAIN_ID,
-    });
-
     // Get conversion rate
     const { data: rate } = useReadContract({
-        address: TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`,
-        abi: TownTopUpABI,
+        address: TOWN_TOPUP_NATIVE_ADDRESS as `0x${string}`,
+        abi: TownTopUpNativeABI,
         functionName: "RATE",
         chainId: CHAIN_ID,
     });
 
-    // Check if approval is needed
-    useEffect(() => {
-        if (allowance && mntAmount) {
-            const requiredAmount = parseEther(mntAmount);
-            setNeedsApproval((allowance as bigint) < requiredAmount);
-        }
-    }, [allowance, mntAmount]);
-
     // Write contract functions
     const { writeContract, isPending } = useWriteContract();
 
-    const handleApprove = async () => {
-        try {
-            setStatus("Approving MNT...");
-            writeContract({
-                address: MNT_TOKEN_ADDRESS as `0x${string}`,
-                abi: ERC20_ABI,
-                functionName: "approve",
-                args: [TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`, parseEther("1000000")], // Approve large amount
-                chainId: CHAIN_ID,
-            }, {
-                onSuccess: () => {
-                    setStatus("✅ Approval successful! Now you can buy TOWN.");
-                    refetchAllowance();
-                    setNeedsApproval(false);
-                },
-                onError: (error) => {
-                    setStatus(`Error: ${error.message}`);
-                },
-            });
-        } catch (error: any) {
-            setStatus(`Error: ${error.message}`);
-        }
-    };
-
     const handleBuyTown = async () => {
         if (!mntAmount || parseFloat(mntAmount) <= 0) {
-            setStatus("Please enter a valid amount");
+            setStatus("❌ Error: Please enter a valid amount");
+            return;
+        }
+
+        // Check if user has enough native MNT
+        const requiredAmount = parseEther(mntAmount);
+        const currentBalance = nativeBalance?.value || 0n;
+
+        if (currentBalance < requiredAmount) {
+            setStatus(`❌ Error: Insufficient MNT balance. You need ${mntAmount} MNT but only have ${formatEther(currentBalance)}`);
             return;
         }
 
         try {
-            setStatus("Buying TOWN...");
+            setStatus("Buying TOWN with native MNT...");
             writeContract({
-                address: TOWN_TOPUP_MANTLE_ADDRESS as `0x${string}`,
-                abi: TownTopUpABI,
+                address: TOWN_TOPUP_NATIVE_ADDRESS as `0x${string}`,
+                abi: TownTopUpNativeABI,
                 functionName: "buyTOWN",
-                args: [parseEther(mntAmount)],
+                value: parseEther(mntAmount), // Send MNT with transaction
                 chainId: CHAIN_ID,
             }, {
                 onSuccess: () => {
                     setStatus(`✅ Success! You bought ${parseFloat(mntAmount) * 50} TOWN`);
                     refetchTownBalance();
-                    refetchMntBalance();
+                    refetchNativeBalance();
                 },
                 onError: (error) => {
-                    setStatus(`Error: ${error.message}`);
+                    console.error("Buy TOWN error:", error);
+                    setStatus(`❌ Error: ${error.message}`);
                 },
             });
         } catch (error: any) {
-            setStatus(`Error: ${error.message}`);
+            console.error("Buy TOWN catch error:", error);
+            setStatus(`❌ Error: ${error.message}`);
         }
     };
 
@@ -125,7 +92,7 @@ export default function TestTopUpMantle() {
 
     // Check if on wrong network
     const isWrongNetwork = isConnected && chain?.id !== CHAIN_ID;
-    const hasMntBalance = mntBalance && (mntBalance as bigint) > 0n;
+    const hasEnoughMnt = nativeBalance && nativeBalance.value >= parseEther(mntAmount || "0");
 
     return (
         <div style={{
@@ -196,13 +163,17 @@ export default function TestTopUpMantle() {
                             marginBottom: "20px",
                         }}>
                             <h3 style={{ color: "#10b981", marginBottom: "15px", fontSize: "14px" }}>Your Balances</h3>
+
+                            {/* Native MNT */}
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                                <span style={{ color: "#888" }}>MNT:</span>
+                                <span style={{ color: "#10b981", fontSize: "14px", fontWeight: "500" }}>MNT:</span>
                                 <span style={{ color: "#10b981", fontWeight: "bold" }}>
-                                    {mntBalance ? parseFloat(formatEther(mntBalance as bigint)).toFixed(4) : "0"} MNT
+                                    {nativeBalance ? parseFloat(formatEther(nativeBalance.value)).toFixed(4) : "0"} MNT
                                 </span>
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+
+                            {/* TOWN Balance */}
+                            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "10px", borderTop: "1px solid rgba(255, 255, 255, 0.1)" }}>
                                 <span style={{ color: "#888" }}>TOWN:</span>
                                 <span style={{ color: "#fff", fontWeight: "bold" }}>
                                     {townBalance ? parseFloat(formatEther(townBalance as bigint)).toFixed(2) : "0"} TOWN
@@ -210,29 +181,32 @@ export default function TestTopUpMantle() {
                             </div>
                         </div>
 
-                        {/* Zero Balance Warning */}
-                        {!hasMntBalance && (
+                        {/* Low Balance Warning */}
+                        {nativeBalance && nativeBalance.value < parseEther("0.01") && (
                             <div style={{
-                                background: "rgba(59, 130, 246, 0.2)",
+                                background: "rgba(251, 191, 36, 0.2)",
                                 borderRadius: "12px",
                                 padding: "15px",
                                 marginBottom: "20px",
-                                border: "1px solid rgba(59, 130, 246, 0.3)",
+                                border: "1px solid rgba(251, 191, 36, 0.3)",
                             }}>
-                                <p style={{ color: "#3b82f6", fontSize: "14px", margin: "0 0 10px 0" }}>
-                                    💧 You need MNT tokens to buy TOWN!
+                                <p style={{ color: "#fbbf24", fontSize: "14px", margin: "0 0 8px 0", fontWeight: "500" }}>
+                                    ⚠️ Low MNT Balance
+                                </p>
+                                <p style={{ color: "#fcd34d", fontSize: "12px", margin: "0 0 10px 0" }}>
+                                    You need MNT tokens to buy TOWN and pay for gas.
                                 </p>
                                 <a
                                     href="https://faucet.testnet.mantle.xyz/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{
-                                        color: "#60a5fa",
+                                        color: "#fcd34d",
                                         fontSize: "13px",
                                         textDecoration: "underline",
                                     }}
                                 >
-                                    Get MNT from Mantle Faucet →
+                                    → Get MNT from Mantle Faucet
                                 </a>
                             </div>
                         )}
@@ -279,51 +253,26 @@ export default function TestTopUpMantle() {
                             </p>
                         </div>
 
-                        {/* Approve Button (if needed) */}
-                        {needsApproval && (
-                            <button
-                                onClick={handleApprove}
-                                disabled={isPending}
-                                style={{
-                                    width: "100%",
-                                    padding: "15px",
-                                    borderRadius: "12px",
-                                    border: "none",
-                                    background: isPending
-                                        ? "rgba(251, 191, 36, 0.5)"
-                                        : "linear-gradient(135deg, #f59e0b, #d97706)",
-                                    color: "#fff",
-                                    fontSize: "16px",
-                                    fontWeight: "bold",
-                                    cursor: isPending ? "not-allowed" : "pointer",
-                                    transition: "all 0.2s",
-                                    marginBottom: "10px",
-                                }}
-                            >
-                                {isPending ? "Approving..." : "1. Approve MNT"}
-                            </button>
-                        )}
-
                         {/* Buy Button */}
                         <button
                             onClick={handleBuyTown}
-                            disabled={isPending || needsApproval}
+                            disabled={isPending || !hasEnoughMnt}
                             style={{
                                 width: "100%",
                                 padding: "15px",
                                 borderRadius: "12px",
                                 border: "none",
-                                background: (isPending || needsApproval)
+                                background: (isPending || !hasEnoughMnt)
                                     ? "rgba(16, 185, 129, 0.3)"
                                     : "linear-gradient(135deg, #10b981, #059669)",
                                 color: "#fff",
                                 fontSize: "16px",
                                 fontWeight: "bold",
-                                cursor: (isPending || needsApproval) ? "not-allowed" : "pointer",
+                                cursor: (isPending || !hasEnoughMnt) ? "not-allowed" : "pointer",
                                 transition: "all 0.2s",
                             }}
                         >
-                            {isPending ? "Processing..." : needsApproval ? "2. Buy TOWN (Approve first)" : `Buy ${expectedTown} TOWN`}
+                            {isPending ? "Processing..." : `Buy ${expectedTown} TOWN`}
                         </button>
 
                         {/* Status */}

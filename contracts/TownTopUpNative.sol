@@ -2,25 +2,15 @@
 pragma solidity ^0.8.20;
 
 /**
- * ERC20 Top-up for Ethereum Sepolia:
- * Users deposit SepoliaMNT (ERC20) and receive TOWN tokens at 1:50 rate.
+ * Native MNT Top-up for Mantle Sepolia:
+ * Users send native MNT and receive TOWN tokens at 1:50 rate.
  *
- * - Users call approve() on SepoliaMNT first, then buyTOWN(amount)
- * - Contract transfers SepoliaMNT from user and mints TOWN
- * - Owner can withdraw collected SepoliaMNT
+ * - Users call buyTOWN() with MNT value
+ * - Contract mints TOWN tokens
+ * - Owner can withdraw collected MNT
  */
 
-interface IERC20 {
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-}
-
-contract TownTokenERC20 {
+contract TownTokenNative {
     // -- ERC20 minimal ---
     string public name = "Town Token";
     string public symbol = "TOWN";
@@ -99,69 +89,65 @@ contract TownTokenERC20 {
     }
 }
 
-contract TownTopUpERC20 {
-    uint256 public constant RATE = 50; // 50 TOWN per 1 SepoliaMNT (1e18 wei)
+contract TownTopUpNative {
+    uint256 public constant RATE = 50; // 50 TOWN per 1 MNT
 
-    TownTokenERC20 public immutable town;
-    IERC20 public immutable paymentToken; // SepoliaMNT
+    TownTokenNative public immutable town;
     address public owner;
 
     event Bought(address indexed user, uint256 mntAmount, uint256 townAmount);
+    event Withdrawn(address indexed to, uint256 amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "NOT_OWNER");
         _;
     }
 
-    constructor(address _paymentToken) {
-        require(_paymentToken != address(0), "ZERO_PAYMENT_TOKEN");
+    constructor() {
         owner = msg.sender;
-        paymentToken = IERC20(_paymentToken);
 
         // Deploy token and set this contract as minter
-        TownTokenERC20 _town = new TownTokenERC20(address(this));
+        TownTokenNative _town = new TownTokenNative(address(this));
         town = _town;
         _town.setMinter(address(this), true);
     }
 
     /**
-     * @notice Buy TOWN tokens with SepoliaMNT
-     * @param amount Amount of SepoliaMNT to spend (must have approved first)
+     * @notice Buy TOWN tokens with native MNT
+     * Send MNT with this transaction
      */
-    function buyTOWN(uint256 amount) external {
-        require(amount > 0, "ZERO_AMOUNT");
-
-        // Transfer SepoliaMNT from user to this contract
-        bool success = paymentToken.transferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
-        require(success, "TRANSFER_FAILED");
+    function buyTOWN() external payable {
+        require(msg.value > 0, "ZERO_AMOUNT");
 
         // Mint TOWN at 1:50 rate
-        uint256 mintAmount = amount * RATE;
+        uint256 mintAmount = msg.value * RATE;
         town.mint(msg.sender, mintAmount);
 
-        emit Bought(msg.sender, amount, mintAmount);
+        emit Bought(msg.sender, msg.value, mintAmount);
     }
 
     /**
-     * @notice Owner can withdraw collected SepoliaMNT
+     * @notice Owner can withdraw collected MNT
      */
-    function withdrawPaymentToken(
-        address to,
-        uint256 amount
-    ) external onlyOwner {
+    function withdraw(address payable to, uint256 amount) external onlyOwner {
         require(to != address(0), "ZERO_TO");
-        bool success = paymentToken.transfer(to, amount);
+        require(address(this).balance >= amount, "INSUFFICIENT_BALANCE");
+
+        (bool success, ) = to.call{value: amount}("");
         require(success, "TRANSFER_FAILED");
+
+        emit Withdrawn(to, amount);
     }
 
     /**
-     * @notice Get contract's SepoliaMNT balance
+     * @notice Get contract's MNT balance
      */
-    function paymentTokenBalance() external view returns (uint256) {
-        return paymentToken.balanceOf(address(this));
+    function getBalance() external view returns (uint256) {
+        return address(this).balance;
     }
+
+    /**
+     * @notice Receive function to accept MNT
+     */
+    receive() external payable {}
 }
