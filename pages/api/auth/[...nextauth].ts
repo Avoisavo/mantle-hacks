@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { createLightAccountAlchemyClient } from "@alchemy/aa-alchemy";
-import {AlchemyProvider} from "@alchemy/aa-alchemy";
+
 import { LocalAccountSigner } from "@alchemy/aa-core";
 
 export default NextAuth({
