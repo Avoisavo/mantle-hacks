@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -8,6 +8,21 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export default function Game2Page() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [diceValue, setDiceValue] = useState<number | null>(null);
+    const [isMoving, setIsMoving] = useState(false);
+
+    // Function to roll dice and move character
+    const rollDice = () => {
+        if (isMoving) return;
+
+        const roll = Math.floor(Math.random() * 6) + 1;
+        setDiceValue(roll);
+        setIsMoving(true);
+
+        // Trigger character move
+        const event = new CustomEvent('moveCharacter', { detail: { steps: roll } });
+        window.dispatchEvent(event);
+    };
 
     useEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -23,7 +38,7 @@ export default function Game2Page() {
             0.1,
             1000
         );
-        camera.position.set(10, 12, 0);
+        camera.position.set(-7, 11.5, -7);
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({
@@ -200,11 +215,38 @@ export default function Game2Page() {
         const firstTileX = -((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2);
         const firstTileZ = -((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2);
 
+        let character: THREE.Object3D | null = null;
+
+        // Generate clockwise tile positions
+        const tilePositions: { x: number; z: number }[] = [];
+        const leftCol = Array.from({ length: gridSize }, (_, i) => ({
+            x: -((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2),
+            z: (i * (tileSize + gap)) - gridOffset
+        }));
+        const bottomRow = Array.from({ length: gridSize - 1 }, (_, j) => ({
+            x: ((j + 1) * (tileSize + gap)) - gridOffset,
+            z: ((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2)
+        }));
+        const rightCol = Array.from({ length: gridSize - 1 }, (_, i) => ({
+            x: ((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2),
+            z: ((gridSize - 2 - i) * (tileSize + gap)) - gridOffset
+        }));
+        const topRow = Array.from({ length: gridSize - 1 }, (_, j) => ({
+            x: ((gridSize - 2 - j) * (tileSize + gap)) - gridOffset,
+            z: -((gridSize * (tileSize + gap)) / 2 - (tileSize + gap) / 2)
+        }));
+
+        tilePositions.push(...leftCol, ...bottomRow, ...rightCol, ...topRow);
+
+        let currentPosition = 0;
+        let currentRotation = 0;
+
         loader.load(
             '/game2/greenguy.glb',
             (gltf) => {
-                const character = gltf.scene;
+                character = gltf.scene;
                 character.position.set(firstTileX, 11, firstTileZ);
+                character.rotation.y = 0;
                 character.scale.set(0.6, 0.6, 0.6);
                 character.traverse((child) => {
                     if (child.isMesh) {
@@ -228,10 +270,66 @@ export default function Game2Page() {
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
+
+            // Update camera to follow character with rotation
+            if (character) {
+                const offset = new THREE.Vector3(-1.5, 0.5, -1.5);
+                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                camera.position.copy(character.position).add(offset);
+                controls.target.copy(character.position);
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
+
+        // Handle character movement
+        const moveCharacter = async (event: Event) => {
+            const customEvent = event as CustomEvent<{ steps: number }>;
+            const steps = customEvent.detail.steps;
+
+            if (!character) return;
+
+            for (let i = 0; i < steps; i++) {
+                const prevPosition = currentPosition;
+                currentPosition = (currentPosition + 1) % tilePositions.length;
+                const targetPos = tilePositions[currentPosition];
+
+                // Check if we're at a corner (every 9th position: 8, 17, 26, 35)
+                const corners = [8, 17, 26, 35];
+                const needsRotation = corners.includes(currentPosition);
+
+                await new Promise<void>((resolve) => {
+                    const startPos = character!.position.clone();
+                    const endPos = new THREE.Vector3(targetPos.x, 11, targetPos.z);
+                    const startRot = character!.rotation.y;
+                    const targetRot = needsRotation ? startRot + Math.PI / 2 : startRot;
+                    const duration = 300;
+                    const startTime = Date.now();
+
+                    function animateMove() {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+
+                        character!.position.lerpVectors(startPos, endPos, progress);
+                        character!.rotation.y = startRot + (targetRot - startRot) * progress;
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animateMove);
+                        } else {
+                            currentRotation = targetRot;
+                            resolve();
+                        }
+                    }
+                    animateMove();
+                });
+            }
+
+            setIsMoving(false);
+        };
+
+        window.addEventListener('moveCharacter', moveCharacter);
 
         // Handle window resize
         const handleResize = () => {
@@ -244,6 +342,7 @@ export default function Game2Page() {
         // Cleanup
         return () => {
             window.removeEventListener('resize', handleResize);
+            window.removeEventListener('moveCharacter', moveCharacter);
             renderer.dispose();
             controls.dispose();
         };
@@ -254,6 +353,23 @@ export default function Game2Page() {
             <div id="loading" className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl font-bold z-10">
                 Loading...
             </div>
+
+            {/* Dice Roll Button */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+                {diceValue !== null && (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-lg px-8 py-4 shadow-lg">
+                        <p className="text-3xl font-bold text-gray-800">Rolled: {diceValue}</p>
+                    </div>
+                )}
+                <button
+                    onClick={rollDice}
+                    disabled={isMoving}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed text-xl"
+                >
+                    {isMoving ? 'Moving...' : '🎲 Roll Dice'}
+                </button>
+            </div>
+
             <canvas ref={canvasRef} className="block" />
         </div>
     );
