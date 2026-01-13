@@ -1073,8 +1073,8 @@ export default function Game2Page() {
             '/game2/house_01.glb',
             (gltf) => {
                 houseModel = gltf.scene;
-                houseModel.position.set(0, 0, 0);
-                houseModel.scale.set(0.5, 0.5, 0.5);
+                houseModel.position.set(0, 1.8, 0);
+                houseModel.scale.set(2, 2, 2);
                 houseModel.traverse((child) => {
                     if ((child as THREE.Mesh).isMesh) {
                         const mesh = child as THREE.Mesh;
