@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Head from 'next/head';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -481,6 +482,14 @@ export default function Game2Page() {
 
                 // Hide loading text when animation starts (after 1 second delay)
                 if (introAnimationTime >= 0 && introAnimationTime < 0.1) {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) {
+                        loadingEl.style.transition = 'opacity 0.1s ease-out';
+                        loadingEl.style.opacity = '0';
+                        setTimeout(() => {
+                            loadingEl.style.display = 'none';
+                        }, 500);
+                    }
                     textMesh.visible = false;
                 }
 
@@ -644,9 +653,45 @@ export default function Game2Page() {
     }, []);
 
     return (
-        <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
-            background: 'linear-gradient(135deg, #000000 0%, #05000a 30%, #0a0010 50%, #05000a 70%, #000000 100%)'
-        }}>
+        <>
+            <Head>
+                <link rel="preload" href="/fonts/LuckiestGuy.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+                <link rel="preload" href="/fonts/LuckiestGuy-Regular.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+            </Head>
+            <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
+                background: 'linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%)'
+            }}>
+                {/* Loading text */}
+                <div id="loading" className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
+                    <h1
+                        style={{
+                            fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                            fontSize: "clamp(5rem, 12vw, 10rem)",
+                            fontWeight: "normal",
+                            color: "#FFD700",
+                            textShadow: `
+                              0 1px 0 #B19CD9,
+                              0 2px 0 #B19CD9,
+                              0 3px 0 #B19CD9,
+                              0 4px 0 #B19CD9,
+                              0 5px 0 #B19CD9,
+                              0 6px 1px rgba(0,0,0,.1),
+                              0 0 5px rgba(0,0,0,.1),
+                              0 1px 3px rgba(0,0,0,.3),
+                              0 3px 5px rgba(0,0,0,.2),
+                              0 5px 10px rgba(0,0,0,.25),
+                              0 10px 10px rgba(0,0,0,.2),
+                              0 20px 20px rgba(0,0,0,.15),
+                              0 0 20px #FFD700,
+                              0 0 40px #FFD70055
+                            `,
+                            letterSpacing: "0.05em",
+                        }}
+                    >
+                        Cointown
+                    </h1>
+                </div>
+
             {/* Background blur layer */}
             <div className="absolute inset-0" style={{
                 background: 'inherit',
@@ -654,8 +699,10 @@ export default function Game2Page() {
                 zIndex: 0
             }}></div>
 
+            <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+
             {/* Dice Roll Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-30">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-50">
                 {diceValue !== null && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-lg px-8 py-4 shadow-lg">
                         <p className="text-3xl font-bold text-gray-800">Rolled: {diceValue}</p>
@@ -669,8 +716,7 @@ export default function Game2Page() {
                     {isMoving ? 'Moving...' : '🎲 Roll Dice'}
                 </button>
             </div>
-
-            <canvas ref={canvasRef} className="block relative z-1" />
         </div>
+        </>
     );
 }

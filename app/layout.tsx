@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit"
 import { config } from "@/lib/wagmi"
 import "@rainbow-me/rainbowkit/styles.css"
+import "@/styles/globals.css"
 import { useState } from "react"
 
 export default function RootLayout({
