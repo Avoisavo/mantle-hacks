@@ -1069,13 +1069,13 @@ export default function Game2Page() {
                     const angle20 = (20 * Math.PI) / 180;
                     const offset = new THREE.Vector3(
                         -distance * Math.cos(angle20),
-                        0.18,
+                        0.24,
                         -distance * Math.sin(angle20)
                     );
                     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                     const floatPosition = character.position.clone().add(offset);
 
-                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.55, floatPosition.z);
+                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.5, floatPosition.z);
 
                     // Rotate faster based on charge power when charging
                     if (isChargingRef.current) {
@@ -1206,11 +1206,11 @@ export default function Game2Page() {
             const power = customEvent.detail.power; // 0-100
 
             // Calculate dice spawn position based on character position (camera view at 20 degrees)
-            const distance = 1;
+            const distance = 1.2;
             const angle20 = (20 * Math.PI) / 180;
             const spawnOffset = new THREE.Vector3(
                 -distance * Math.cos(angle20),
-                0.5,
+                0.24,
                 -distance * Math.sin(angle20)
             );
 
@@ -1221,7 +1221,7 @@ export default function Game2Page() {
             const spawnPosition = character!.position.clone().add(spawnOffset);
 
             // Reset dice position and apply random force
-            diceBody.position.set(spawnPosition.x, spawnPosition.y - 0.12, spawnPosition.z);
+            diceBody.position.set(spawnPosition.x, spawnPosition.y - 0.5, spawnPosition.z);
             diceBody.velocity.set(0, 0, 0);
             diceBody.angularVelocity.set(0, 0, 0);
 
