@@ -117,18 +117,51 @@ export default function Game2Page() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [diceValue, setDiceValue] = useState<number | null>(null);
     const [isMoving, setIsMoving] = useState(false);
+    const [isCharging, setIsCharging] = useState(false);
+    const [chargePower, setChargePower] = useState(0);
+    const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Function to roll dice and move character
-    const rollDice = () => {
+    // Start charging when mouse/touch is pressed
+    const startCharging = () => {
         if (isMoving) return;
 
-        setIsMoving(true);
-        setDiceValue(null);
+        setIsCharging(true);
+        setChargePower(0);
 
-        // Trigger dice roll animation via event
-        const event = new CustomEvent('rollDice', {});
-        window.dispatchEvent(event);
+        // Increase power over time (up to 100% over 1 second)
+        chargeIntervalRef.current = setInterval(() => {
+            setChargePower((prev) => Math.min(prev + 4, 100));
+        }, 40); // Update every 40ms (25fps)
     };
+
+    // Release to roll with charged power
+    const releaseCharging = () => {
+        if (!isCharging || isMoving) return;
+
+        setIsCharging(false);
+        setIsMoving(true);
+        // Don't clear diceValue here - let it clear when new result comes in
+
+        // Trigger dice roll with charge power
+        const event = new CustomEvent('rollDice', { detail: { power: chargePower } });
+        window.dispatchEvent(event);
+
+        setChargePower(0);
+
+        if (chargeIntervalRef.current) {
+            clearInterval(chargeIntervalRef.current);
+            chargeIntervalRef.current = null;
+        }
+    };
+
+    // Clean up intervals on unmount
+    useEffect(() => {
+        return () => {
+            if (chargeIntervalRef.current) {
+                clearInterval(chargeIntervalRef.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -882,7 +915,10 @@ export default function Game2Page() {
         window.addEventListener('moveCharacter', moveCharacter);
 
         // Handle dice roll
-        const rollDiceHandler = () => {
+        const rollDiceHandler = (event: Event) => {
+            const customEvent = event as CustomEvent<{ power: number }>;
+            const power = customEvent.detail.power; // 0-100
+
             // Calculate dice spawn position based on character position (camera view at 20 degrees)
             const distance = 1;
             const angle20 = (20 * Math.PI) / 180;
@@ -910,15 +946,16 @@ export default function Game2Page() {
                 Math.random() * Math.PI * 2
             );
 
-            // Calculate throw direction (toward the table center)
+            // Calculate throw direction and power based on charge
+            const powerMultiplier = power / 100; // 0 to 1
             const throwDirection = new CANNON.Vec3(
                 -spawnPosition.x * 0.15,
-                3, // Upward force - reduced
+                2 + powerMultiplier * 3, // Upward force: 2 to 5
                 -spawnPosition.z * 0.15
             );
 
-            // Apply random impulse for throwing
-            const impulseStrength = 3; // Reduced from 8
+            // Apply random impulse for throwing (affected by charge power)
+            const impulseStrength = 2 + powerMultiplier * 3; // 2 to 5
             const impulse = new CANNON.Vec3(
                 throwDirection.x + (Math.random() - 0.5) * impulseStrength,
                 throwDirection.y + Math.random() * impulseStrength * 0.5,
@@ -927,7 +964,7 @@ export default function Game2Page() {
             diceBody.applyImpulse(impulse);
 
             // Apply random torque for spinning
-            const torqueStrength = 20; // Reduced from 50
+            const torqueStrength = 15 + powerMultiplier * 20; // 15 to 35
             const torque = new CANNON.Vec3(
                 (Math.random() - 0.5) * torqueStrength,
                 (Math.random() - 0.5) * torqueStrength,
@@ -1013,16 +1050,85 @@ export default function Game2Page() {
             {/* Dice Roll Button */}
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-50">
                 {diceValue !== null && (
-                    <div className="bg-white/90 backdrop-blur-sm rounded-lg px-8 py-4 shadow-lg">
-                        <p className="text-3xl font-bold text-gray-800">Rolled: {diceValue}</p>
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+                        <canvas
+                            ref={(canvas) => {
+                                if (canvas && diceValue !== null) {
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        canvas.width = 128;
+                                        canvas.height = 128;
+
+                                        // Draw dice face
+                                        ctx.fillStyle = '#ffffff';
+                                        ctx.fillRect(0, 0, 128, 128);
+
+                                        // Add gradient
+                                        const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+                                        gradient.addColorStop(0, '#ffffff');
+                                        gradient.addColorStop(1, '#f0f0f0');
+                                        ctx.fillStyle = gradient;
+                                        ctx.fillRect(0, 0, 128, 128);
+
+                                        // Draw border
+                                        ctx.strokeStyle = '#cccccc';
+                                        ctx.lineWidth = 2;
+                                        ctx.strokeRect(1, 1, 126, 126);
+
+                                        // Get dots configuration for this face
+                                        const faceConfigs = [
+                                            [{ x: 64, y: 64 }],
+                                            [{ x: 32, y: 32 }, { x: 96, y: 96 }],
+                                            [{ x: 32, y: 32 }, { x: 64, y: 64 }, { x: 96, y: 96 }],
+                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
+                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 64, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
+                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 64 }, { x: 96, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }]
+                                        ];
+
+                                        const dots = faceConfigs[diceValue - 1];
+
+                                        // Draw dots
+                                        ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
+                                        for (const dot of dots) {
+                                            ctx.beginPath();
+                                            ctx.arc(dot.x, dot.y, 12, 0, Math.PI * 2);
+                                            ctx.fill();
+
+                                            // Add shadow
+                                            ctx.beginPath();
+                                            ctx.arc(dot.x + 1, dot.y + 1, 12, 0, Math.PI * 2);
+                                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                                            ctx.fill();
+                                            ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
+                                        }
+                                    }
+                                }
+                            }}
+                            className="w-20 h-20"
+                        />
                     </div>
                 )}
+
+                {/* Charge meter */}
+                {isCharging && (
+                    <div className="w-48 h-4 bg-gray-700 rounded-full overflow-hidden shadow-lg">
+                        <div
+                            className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 transition-all duration-75 ease-out"
+                            style={{ width: `${chargePower}%` }}
+                        />
+                    </div>
+                )}
+
                 <button
-                    onClick={rollDice}
+                    onMouseDown={startCharging}
+                    onMouseUp={releaseCharging}
+                    onMouseLeave={releaseCharging}
+                    onTouchStart={startCharging}
+                    onTouchEnd={releaseCharging}
                     disabled={isMoving}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed text-xl"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed text-xl select-none"
                 >
-                    {isMoving ? 'Moving...' : '🎲 Roll Dice'}
+                    {isMoving ? 'Moving...' : isCharging ? '🎲 Release!' : '🎲 Hold to Roll'}
                 </button>
             </div>
         </div>
