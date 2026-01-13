@@ -117,13 +117,21 @@ export default function Game2Page() {
     const containerRef = useRef<HTMLDivElement>(null);
     const houseCanvasRef = useRef<HTMLCanvasElement>(null);
     const houseContainerRef = useRef<HTMLDivElement>(null);
+    const lightningCanvasRef = useRef<HTMLCanvasElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const [diceValue, setDiceValue] = useState<number | null>(null);
     const [isMoving, setIsMoving] = useState(false);
     const [isCharging, setIsCharging] = useState(false);
     const [chargePower, setChargePower] = useState(0);
+    const chargePowerRef = useRef(chargePower);
+    const isChargingRef = useRef(false);
     const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [showTileOverlay, setShowTileOverlay] = useState(false);
     const [introComplete, setIntroComplete] = useState(false);
+    const [showDiceResult, setShowDiceResult] = useState(false);
+    const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
+    const lightningAnimationRef = useRef<number | null>(null);
+    const diceMeshRef = useRef<THREE.Mesh | null>(null);
 
     // Start charging when mouse/touch is pressed
     const startCharging = () => {
@@ -144,7 +152,8 @@ export default function Game2Page() {
 
         setIsCharging(false);
         setIsMoving(true);
-        // Don't clear diceValue here - let it clear when new result comes in
+        setDiceValue(null); // Clear previous dice value
+        // Don't hide dice result - let it show naturally when dice lands
 
         // Trigger dice roll with charge power
         const event = new CustomEvent('rollDice', { detail: { power: chargePower } });
@@ -164,8 +173,230 @@ export default function Game2Page() {
             if (chargeIntervalRef.current) {
                 clearInterval(chargeIntervalRef.current);
             }
+            if (lightningAnimationRef.current) {
+                cancelAnimationFrame(lightningAnimationRef.current);
+            }
         };
     }, []);
+
+    // Lightning arc effect
+    useEffect(() => {
+        if (!isCharging || isMoving || !lightningCanvasRef.current || !buttonRef.current) {
+            if (lightningAnimationRef.current) {
+                cancelAnimationFrame(lightningAnimationRef.current);
+                lightningAnimationRef.current = null;
+            }
+            // Clear canvas when not charging
+            if (lightningCanvasRef.current) {
+                const ctx = lightningCanvasRef.current.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, lightningCanvasRef.current.width, lightningCanvasRef.current.height);
+                }
+            }
+            return;
+        }
+
+        const canvas = lightningCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Set canvas size to match window
+        const resizeCanvas = () => {
+            if (lightningCanvasRef.current) {
+                lightningCanvasRef.current.width = window.innerWidth;
+                lightningCanvasRef.current.height = window.innerHeight;
+            }
+        };
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let time = 0;
+
+        // Generate straight lightning line
+        function generateLightning(x1: number, y1: number, x2: number, y2: number, segments: number) {
+            const points = [{ x: x1, y: y1 }];
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+
+            for (let i = 1; i <= segments; i++) {
+                const t = i / segments;
+                const baseX = x1 + dx * t;
+                const baseY = y1 + dy * t;
+
+                // Add jitter for lightning effect
+                points.push({
+                    x: baseX + (Math.random() - 0.5) * 15,
+                    y: baseY + (Math.random() - 0.5) * 10
+                });
+            }
+
+            return points;
+        }
+
+        function drawLightning() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const buttonRect = buttonRef.current!.getBoundingClientRect();
+            const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+            const buttonTopY = buttonRect.top;
+
+            // Dice position (estimated based on screen center and typical camera position)
+            // The dice floats in front of and slightly above the character
+            // Based on the 20-degree camera angle and character positioning
+            const diceX = canvas.width / 2; // Center of screen for straight up (90 degrees)
+            const diceY = canvas.height * 0.50; // Shorter arc - closer to button
+
+            // Number of lightning bolts based on charge power
+            const numBolts = 2 + Math.floor(chargePower / 30);
+            const intensity = chargePower / 100;
+
+            for (let b = 0; b < numBolts; b++) {
+                const segments = 15 + Math.floor(Math.random() * 10);
+                const points = generateLightning(
+                    buttonCenterX + (Math.random() - 0.5) * 40,
+                    buttonTopY,
+                    diceX + (Math.random() - 0.5) * 60,
+                    diceY,
+                    segments
+                );
+
+                // Draw main bolt with glow
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+
+                // Outer glow
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20 + intensity * 30;
+                ctx.strokeStyle = `rgba(0, 255, 255, ${0.6 + intensity * 0.4})`;
+                ctx.lineWidth = 2 + intensity * 2;
+                ctx.stroke();
+
+                // Inner white core
+                ctx.shadowBlur = 10;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 + intensity * 0.2})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Draw glowing particles along the path
+            const numParticles = Math.floor(chargePower / 10);
+            for (let i = 0; i < numParticles; i++) {
+                const t = Math.random();
+                const x = buttonCenterX + (diceX - buttonCenterX) * t + (Math.random() - 0.5) * 30;
+                const y = buttonTopY + (diceY - buttonTopY) * t + (Math.random() - 0.5) * 30;
+                const size = 1 + Math.random() * 2;
+
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 255, 255, ${0.5 + Math.random() * 0.5})`;
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+            }
+
+            // Add extra energy particles at the dice position
+            for (let i = 0; i < 3; i++) {
+                const x = diceX + (Math.random() - 0.5) * 40;
+                const y = diceY + (Math.random() - 0.5) * 40;
+                const size = 2 + Math.random() * 3;
+
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 255, 255, ${0.7 + Math.random() * 0.3})`;
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 15;
+                ctx.fill();
+            }
+
+            time += 0.016;
+            lightningAnimationRef.current = requestAnimationFrame(drawLightning);
+        }
+
+        drawLightning();
+
+        return () => {
+            window.removeEventListener('resize', resizeCanvas);
+            if (lightningAnimationRef.current) {
+                cancelAnimationFrame(lightningAnimationRef.current);
+            }
+        };
+    }, [isCharging, isMoving, chargePower]);
+
+    // Draw dice result when it should be shown
+    useEffect(() => {
+        if (showDiceResult && diceValue !== null && diceResultCanvasRef.current) {
+            const canvas = diceResultCanvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            canvas.width = 128;
+            canvas.height = 128;
+
+            // Draw dice face
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Add gradient
+            const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(1, '#f0f0f0');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 128, 128);
+
+            // Draw border
+            ctx.strokeStyle = '#cccccc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(1, 1, 126, 126);
+
+            // Get dots configuration for this face
+            const faceConfigs = [
+                [{ x: 64, y: 64 }],
+                [{ x: 32, y: 32 }, { x: 96, y: 96 }],
+                [{ x: 32, y: 32 }, { x: 64, y: 64 }, { x: 96, y: 96 }],
+                [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
+                [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 64, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
+                [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 64 }, { x: 96, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }]
+            ];
+
+            const dots = faceConfigs[diceValue - 1];
+
+            // Draw dots
+            ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
+            for (const dot of dots) {
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add shadow
+                ctx.beginPath();
+                ctx.arc(dot.x + 1, dot.y + 1, 12, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fill();
+                ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
+            }
+        }
+    }, [showDiceResult, diceValue]);
+
+    // Show 3D dice when overlay closes
+    useEffect(() => {
+        if (!showTileOverlay && diceMeshRef.current) {
+            diceMeshRef.current.visible = true;
+        }
+    }, [showTileOverlay]);
+
+    // Keep refs in sync with state
+    useEffect(() => {
+        chargePowerRef.current = chargePower;
+    }, [chargePower]);
+
+    useEffect(() => {
+        isChargingRef.current = isCharging;
+    }, [isCharging]);
 
     useEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -294,6 +525,9 @@ export default function Game2Page() {
         diceMesh.receiveShadow = true;
         diceMesh.visible = false; // Hide initially
         scene.add(diceMesh);
+
+        // Store diceMesh in ref for later access
+        diceMeshRef.current = diceMesh;
 
         // Create dice physics body
         const diceShape = new CANNON.Box(new CANNON.Vec3(diceSize / 2, diceSize / 2, diceSize / 2));
@@ -828,8 +1062,9 @@ export default function Game2Page() {
                     diceMesh.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
 
                     // Rotate faster based on charge power when charging
-                    if (isCharging) {
-                        const spinSpeed = 0.02 + (chargePower / 100) * 0.3; // 0.02 to 0.32 based on charge
+                    if (isChargingRef.current) {
+                        const currentChargePower = chargePowerRef.current;
+                        const spinSpeed = 0.02 + (currentChargePower / 100) * 0.3; // 0.02 to 0.32 based on charge
                         diceMesh.rotation.y += spinSpeed;
                         diceMesh.rotation.x += spinSpeed * 0.5;
                     } else {
@@ -861,6 +1096,9 @@ export default function Game2Page() {
                         setDiceValue(finalValue);
                         isDiceRolling = false;
                         velocityCheckCount = 0;
+
+                        // Show dice result immediately when dice finishes tumbling
+                        setShowDiceResult(true);
 
                         // Trigger character movement after a short delay
                         setTimeout(() => {
@@ -926,6 +1164,14 @@ export default function Game2Page() {
             }
 
             setIsMoving(false);
+
+            // Hide dice result after movement completes
+            setShowDiceResult(false);
+
+            // Hide the 3D dice when movement completes
+            if (diceMeshRef.current) {
+                diceMeshRef.current.visible = false;
+            }
 
             // Return dice to floating state after character finishes moving
             diceShouldFloat = true;
@@ -1174,90 +1420,165 @@ export default function Game2Page() {
 
             <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
 
+            {/* Lightning arc canvas */}
+            <canvas
+                ref={lightningCanvasRef}
+                className="absolute inset-0 pointer-events-none"
+                style={{ zIndex: 15 }}
+            />
+
             {/* Dice Roll Button */}
             {introComplete && (
                 <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
-                {diceValue !== null && isMoving && (
+                {showDiceResult && diceValue !== null && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
                         <canvas
-                            ref={(canvas) => {
-                                if (canvas && diceValue !== null) {
-                                    const ctx = canvas.getContext('2d');
-                                    if (ctx) {
-                                        canvas.width = 128;
-                                        canvas.height = 128;
-
-                                        // Draw dice face
-                                        ctx.fillStyle = '#ffffff';
-                                        ctx.fillRect(0, 0, 128, 128);
-
-                                        // Add gradient
-                                        const gradient = ctx.createLinearGradient(0, 0, 128, 128);
-                                        gradient.addColorStop(0, '#ffffff');
-                                        gradient.addColorStop(1, '#f0f0f0');
-                                        ctx.fillStyle = gradient;
-                                        ctx.fillRect(0, 0, 128, 128);
-
-                                        // Draw border
-                                        ctx.strokeStyle = '#cccccc';
-                                        ctx.lineWidth = 2;
-                                        ctx.strokeRect(1, 1, 126, 126);
-
-                                        // Get dots configuration for this face
-                                        const faceConfigs = [
-                                            [{ x: 64, y: 64 }],
-                                            [{ x: 32, y: 32 }, { x: 96, y: 96 }],
-                                            [{ x: 32, y: 32 }, { x: 64, y: 64 }, { x: 96, y: 96 }],
-                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
-                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 64, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }],
-                                            [{ x: 32, y: 32 }, { x: 96, y: 32 }, { x: 32, y: 64 }, { x: 96, y: 64 }, { x: 32, y: 96 }, { x: 96, y: 96 }]
-                                        ];
-
-                                        const dots = faceConfigs[diceValue - 1];
-
-                                        // Draw dots
-                                        ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
-                                        for (const dot of dots) {
-                                            ctx.beginPath();
-                                            ctx.arc(dot.x, dot.y, 12, 0, Math.PI * 2);
-                                            ctx.fill();
-
-                                            // Add shadow
-                                            ctx.beginPath();
-                                            ctx.arc(dot.x + 1, dot.y + 1, 12, 0, Math.PI * 2);
-                                            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                                            ctx.fill();
-                                            ctx.fillStyle = (diceValue % 2 === 0) ? '#1a1a2e' : '#e74c3c';
-                                        }
-                                    }
-                                }
-                            }}
+                            ref={diceResultCanvasRef}
                             className="w-20 h-20"
                         />
                     </div>
                 )}
 
-                {/* Charge meter */}
+                {/* Sci-fi Charge meter */}
                 {isCharging && (
-                    <div className="w-48 h-4 bg-gray-700 rounded-full overflow-hidden shadow-lg">
-                        <div
-                            className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 transition-all duration-75 ease-out"
-                            style={{ width: `${chargePower}%` }}
-                        />
+                    <div className="relative w-64 h-8">
+                        {/* Outer frame with sci-fi corners */}
+                        <div className="absolute inset-0 border-2 border-cyan-400 rounded-sm">
+                            {/* Corner accents */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-cyan-300"></div>
+                            <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-cyan-300"></div>
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-4 border-l-4 border-cyan-300"></div>
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-4 border-r-4 border-cyan-300"></div>
+                        </div>
+
+                        {/* Background grid */}
+                        <div className="absolute inset-1 bg-gray-900/80 overflow-hidden">
+                            <div className="absolute inset-0 opacity-20" style={{
+                                backgroundImage: `
+                                    linear-gradient(90deg, #00ffff 1px, transparent 1px),
+                                    linear-gradient(#00ffff 1px, transparent 1px)
+                                `,
+                                backgroundSize: '8px 8px'
+                            }}></div>
+                        </div>
+
+                        {/* Energy bar */}
+                        <div className="absolute inset-1 flex items-center">
+                            <div className="h-full relative overflow-hidden" style={{ width: `${chargePower}%` }}>
+                                {/* Animated energy gradient */}
+                                <div
+                                    className="h-full transition-all duration-75 ease-out relative"
+                                    style={{
+                                        background: `linear-gradient(90deg,
+                                            #00ffff 0%,
+                                            #00ff88 ${chargePower * 0.3}%,
+                                            #ffff00 ${chargePower * 0.6}%,
+                                            #ff8800 ${chargePower * 0.8}%,
+                                            #ff0044 100%
+                                        )`,
+                                        boxShadow: `0 0 ${chargePower * 0.2}px ${chargePower * 0.1}px rgba(0, 255, 255, 0.8)`
+                                    }}
+                                >
+                                    {/* Scanning line effect */}
+                                    <div className="absolute inset-0 animate-pulse" style={{
+                                        background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                                        animation: 'scan 1s linear infinite'
+                                    }}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Percentage text */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-cyan-300 font-mono text-sm font-bold text-shadow-glow">
+                                {Math.round(chargePower)}%
+                            </span>
+                        </div>
+
+                        {/* Outer glow */}
+                        <div className="absolute -inset-1 rounded-sm opacity-50" style={{
+                            boxShadow: `0 0 ${chargePower * 0.3}px ${chargePower * 0.15}px rgba(0, 255, 255, 0.6)`,
+                            animation: 'pulse-glow 0.5s ease-in-out infinite'
+                        }}></div>
                     </div>
                 )}
 
                 <button
+                    ref={buttonRef}
                     onMouseDown={startCharging}
                     onMouseUp={releaseCharging}
                     onMouseLeave={releaseCharging}
                     onTouchStart={startCharging}
                     onTouchEnd={releaseCharging}
                     disabled={isMoving}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:scale-100 disabled:cursor-not-allowed text-xl select-none"
+                    className="relative group disabled:opacity-50 select-none"
+                    style={{
+                        background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                        border: '2px solid #00ffff',
+                        boxShadow: isCharging ? '0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 20px rgba(0, 255, 255, 0.2)' : '0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 255, 255, 0.1)',
+                        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
+                    }}
                 >
-                    {isMoving ? 'Moving...' : isCharging ? '🎲 Release!' : '🎲 Hold to Roll'}
+                    {/* Corner decorations */}
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-300"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-300"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-300"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-300"></div>
+
+                    {/* Animated border effect */}
+                    <div className="absolute inset-0 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                        background: 'linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent)',
+                        animation: isCharging ? 'border-flow 0.5s linear infinite' : 'none'
+                    }}></div>
+
+                    {/* Grid background overlay */}
+                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
+                        backgroundImage: `
+                            linear-gradient(90deg, #00ffff 1px, transparent 1px),
+                            linear-gradient(#00ffff 1px, transparent 1px)
+                        `,
+                        backgroundSize: '10px 10px'
+                    }}></div>
+
+                    {/* Button content */}
+                    <span className="relative z-10 font-bold py-4 px-8 text-xl"
+                          style={{
+                              color: isCharging ? '#00ffff' : '#00ffcc',
+                              textShadow: isCharging ? '0 0 10px #00ffff, 0 0 20px #00ffff' : '0 0 5px #00ffff',
+                              fontFamily: 'monospace',
+                              letterSpacing: '0.1em'
+                          }}
+                    >
+                        {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[INITIALIZE ROLL]'}
+                    </span>
+
+                    {/* Hover glow effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded"
+                         style={{
+                             background: 'radial-gradient(circle at center, rgba(0, 255, 255, 0.2) 0%, transparent 70%)',
+                             pointerEvents: 'none'
+                         }}
+                    ></div>
                 </button>
+
+                {/* Add custom styles */}
+                <style jsx>{`
+                    @keyframes scan {
+                        0% { transform: translateY(-100%); }
+                        100% { transform: translateY(100%); }
+                    }
+                    @keyframes border-flow {
+                        0% { background-position: -200% center; }
+                        100% { background-position: 200% center; }
+                    }
+                    @keyframes pulse-glow {
+                        0%, 100% { opacity: 0.5; }
+                        50% { opacity: 0.8; }
+                    }
+                    .text-shadow-glow {
+                        text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+                    }
+                `}</style>
             </div>
             )}
 
@@ -1271,7 +1592,10 @@ export default function Game2Page() {
                     <div className="w-[30%] relative flex flex-col justify-center items-center gap-6 p-6">
                         {/* Option buttons */}
                         <button
-                            onClick={() => setShowTileOverlay(false)}
+                            onClick={() => {
+                                setShowTileOverlay(false);
+                                setShowDiceResult(false);
+                            }}
                             className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm"
                         >
                             ✅ End Turn
