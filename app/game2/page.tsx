@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Head from 'next/head';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -59,7 +60,7 @@ export default function Game2Page() {
         );
 
         // Initial camera position for intro animation (high above, looking down)
-        camera.position.set(0, 30, 0);
+        camera.position.set(0, 50, 0);
         const targetCameraPosition = new THREE.Vector3(-7, 11.5, -7);
         let introAnimationTime = -1; // Start with -1 to create 1 second delay
         const phase1Duration = 3; // seconds
@@ -130,10 +131,10 @@ export default function Game2Page() {
         const starsGeometry = new THREE.BufferGeometry();
         const starPositions = [];
         const starSizes = [];
-        for (let i = 0; i < 1500; i++) {
-            const x = (Math.random() - 0.5) * 300;
-            const y = (Math.random() - 0.5) * 300 + 100;
-            const z = (Math.random() - 0.5) * 300;
+        for (let i = 0; i < 5000; i++) {
+            const x = (Math.random() - 0.5) * 400;
+            const y = (Math.random() - 0.5) * 400 + 200;
+            const z = (Math.random() - 0.5) * 400;
             starPositions.push(x, y, z);
             starSizes.push(Math.random() * 1.5 + 0.5);
         }
@@ -210,25 +211,38 @@ export default function Game2Page() {
         textMesh.renderOrder = 1; // Render on top
         scene.add(textMesh);
 
-        // Planet 1 - Large Purple planet with blinking effect
-        const planet1Geometry = new THREE.SphereGeometry(15, 32, 32);
+        // Planet 1 - Pink ring planet
+        const planet1Geometry = new THREE.SphereGeometry(9, 32, 32);
         const planet1Material = new THREE.MeshStandardMaterial({
-            color: 0x8b00ff,
-            emissive: 0x4a0080,
+            color: 0xff69b4,
+            emissive: 0xff1493,
             emissiveIntensity: 0.5,
             roughness: 0.8,
             metalness: 0.2
         });
         const planet1 = new THREE.Mesh(planet1Geometry, planet1Material);
         planet1.position.set(60, 25, -80);
-        scene.add(planet1);
-        planets.push({ mesh: planet1, speed: 0.0001, rotationSpeed: 0.002, distance: 60, angle: 0, baseY: 25, material: planet1Material });
 
-        // Planet 2 - Pink planet with ring (closer)
-        const planet2Geometry = new THREE.SphereGeometry(7, 32, 32);
+        // Add large ring to planet 1
+        const ring1Geometry = new THREE.RingGeometry(12, 19, 64);
+        const ring1Material = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.7
+        });
+        const ring1 = new THREE.Mesh(ring1Geometry, ring1Material);
+        ring1.rotation.x = Math.PI / 2.5;
+        planet1.add(ring1);
+
+        scene.add(planet1);
+        planets.push({ mesh: planet1, speed: 0.0001, rotationSpeed: 0.002, distance: 60, angle: 0, baseY: 25 });
+
+        // Planet 2 - Cyan planet with ring (closer)
+        const planet2Geometry = new THREE.SphereGeometry(12, 32, 32);
         const planet2Material = new THREE.MeshStandardMaterial({
-            color: 0xff69b4,
-            emissive: 0xff1493,
+            color: 0x00ffff,
+            emissive: 0x00aaaa,
             emissiveIntensity: 0.4,
             roughness: 0.7,
             metalness: 0.3
@@ -237,7 +251,7 @@ export default function Game2Page() {
         planet2.position.set(-50, 35, -60);
 
         // Add ring to planet 2
-        const ringGeometry = new THREE.RingGeometry(9, 12, 32);
+        const ringGeometry = new THREE.RingGeometry(15, 20, 64);
         const ringMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             side: THREE.DoubleSide,
@@ -468,21 +482,29 @@ export default function Game2Page() {
 
                 // Hide loading text when animation starts (after 1 second delay)
                 if (introAnimationTime >= 0 && introAnimationTime < 0.1) {
+                    const loadingEl = document.getElementById('loading');
+                    if (loadingEl) {
+                        loadingEl.style.transition = 'opacity 0.1s ease-out';
+                        loadingEl.style.opacity = '0';
+                        setTimeout(() => {
+                            loadingEl.style.display = 'none';
+                        }, 500);
+                    }
                     textMesh.visible = false;
                 }
 
                 // Wait for 1 second delay before starting animation
                 if (introAnimationTime < 0) {
-                    return; // Keep camera at (0, 30, 0) during delay
+                    return; // Keep camera at (0, 50, 0) during delay
                 }
 
-                // Phase 1: Move from (0, 30, 0) to (-7, 11.5, -7) - 3 seconds
+                // Phase 1: Move from (0, 50, 0) to (-7, 11.5, -7) - 3 seconds
                 if (introAnimationTime < phase1Duration) {
                     const progress = introAnimationTime / phase1Duration;
                     const easeOut = 1 - Math.pow(1 - progress, 3);
 
                     camera.position.lerpVectors(
-                        new THREE.Vector3(0, 30, 0),
+                        new THREE.Vector3(0, 50, 0),
                         targetCameraPosition,
                         easeOut
                     );
@@ -530,15 +552,15 @@ export default function Game2Page() {
             }
 
             // Update planets - rotate and float
-            planets.forEach(planet => {
+            planets.forEach((planet, index) => {
                 planet.angle += planet.speed;
                 planet.mesh.rotation.y += planet.rotationSpeed;
                 planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
                 planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
                 planet.mesh.position.y = planet.baseY + Math.sin(planet.angle * 2) * 5; // Add gentle bobbing motion
 
-                // Add blinking effect to purple planet
-                if (planet.material) {
+                // Only apply blinking effect to cyan planet (index 1)
+                if (index === 1 && planet.material) {
                     planet.material.emissiveIntensity = 0.3 + Math.sin(time * 3) * 0.3;
                 }
             });
@@ -631,9 +653,45 @@ export default function Game2Page() {
     }, []);
 
     return (
-        <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
-            background: 'linear-gradient(135deg, #000000 0%, #05000a 30%, #0a0010 50%, #05000a 70%, #000000 100%)'
-        }}>
+        <>
+            <Head>
+                <link rel="preload" href="/fonts/LuckiestGuy.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+                <link rel="preload" href="/fonts/LuckiestGuy-Regular.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+            </Head>
+            <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
+                background: 'linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%)'
+            }}>
+                {/* Loading text */}
+                <div id="loading" className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
+                    <h1
+                        style={{
+                            fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                            fontSize: "clamp(5rem, 12vw, 10rem)",
+                            fontWeight: "normal",
+                            color: "#FFD700",
+                            textShadow: `
+                              0 1px 0 #B19CD9,
+                              0 2px 0 #B19CD9,
+                              0 3px 0 #B19CD9,
+                              0 4px 0 #B19CD9,
+                              0 5px 0 #B19CD9,
+                              0 6px 1px rgba(0,0,0,.1),
+                              0 0 5px rgba(0,0,0,.1),
+                              0 1px 3px rgba(0,0,0,.3),
+                              0 3px 5px rgba(0,0,0,.2),
+                              0 5px 10px rgba(0,0,0,.25),
+                              0 10px 10px rgba(0,0,0,.2),
+                              0 20px 20px rgba(0,0,0,.15),
+                              0 0 20px #FFD700,
+                              0 0 40px #FFD70055
+                            `,
+                            letterSpacing: "0.05em",
+                        }}
+                    >
+                        Cointown
+                    </h1>
+                </div>
+
             {/* Background blur layer */}
             <div className="absolute inset-0" style={{
                 background: 'inherit',
@@ -641,8 +699,10 @@ export default function Game2Page() {
                 zIndex: 0
             }}></div>
 
+            <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+
             {/* Dice Roll Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-30">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-50">
                 {diceValue !== null && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-lg px-8 py-4 shadow-lg">
                         <p className="text-3xl font-bold text-gray-800">Rolled: {diceValue}</p>
@@ -656,8 +716,7 @@ export default function Game2Page() {
                     {isMoving ? 'Moving...' : '🎲 Roll Dice'}
                 </button>
             </div>
-
-            <canvas ref={canvasRef} className="block relative z-1" />
         </div>
+        </>
     );
 }
