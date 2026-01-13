@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
+import { useSession, signOut } from 'next-auth/react';
+import { useAccount, useDisconnect } from 'wagmi';
+import { LogOut, Wallet, AlertCircle } from 'lucide-react';
+import { AvatarIcon } from '@/components/game/ui/AvatarIcon';
 
 // Helper function to create dice textures
 function createDiceTextures(): THREE.Texture[] {
@@ -140,6 +145,52 @@ export default function Game2Page() {
     const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
+
+    // Account state
+    const { data: session } = useSession();
+    const { address: connectedWallet } = useAccount();
+    const { disconnect } = useDisconnect();
+    const router = useRouter();
+    const [showAccountMenu, setShowAccountMenu] = useState(false);
+    const [isVerified, setIsVerified] = useState<boolean | null>(null);
+    const accountMenuRef = useRef<HTMLDivElement>(null);
+
+    // Get account display info
+    const displayName = session?.user?.name || connectedWallet?.slice(0, 6) + "..." + connectedWallet?.slice(-4);
+    const displayImage = session?.user?.image;
+    const isLoggedIn = session || connectedWallet;
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+                setShowAccountMenu(false);
+            }
+        };
+
+        if (showAccountMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showAccountMenu]);
+
+    const handleLogout = async () => {
+        try {
+            if (session) {
+                await signOut({ redirect: false });
+            }
+            if (connectedWallet) {
+                await disconnect();
+            }
+            setShowAccountMenu(false);
+            router.push('/');
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
 
     // Player state
     const [players, setPlayers] = useState<Player[]>([
@@ -1396,6 +1447,55 @@ export default function Game2Page() {
             <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
                 background: 'linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%)'
             }}>
+                {/* Account Display - Top Right */}
+                {isLoggedIn && introComplete && (
+                    <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
+                        {/* User Account Button */}
+                        <div className="relative" ref={accountMenuRef}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAccountMenu(!showAccountMenu);
+                                }}
+                                className="flex items-center gap-3 bg-black/40 backdrop-blur-xl border border-pink-500/40 rounded-full px-4 py-2 hover:border-pink-400/60 transition-all"
+                            >
+                                <div className="w-8 h-8 rounded-full border-2 border-pink-400 flex items-center justify-center bg-pink-500/10">
+                                    {displayImage ? (
+                                        <img
+                                            src={displayImage}
+                                            alt={displayName || "User"}
+                                            className="w-full h-full rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <AvatarIcon name="default" size={16} className="text-pink-400" />
+                                    )}
+                                </div>
+                                <span className="text-white font-medium text-sm">{displayName}</span>
+                            </button>
+
+                            {/* Account Dropdown Menu */}
+                            {showAccountMenu && (
+                                <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-xl border border-pink-500/40 rounded-2xl overflow-hidden">
+                                    <div className="p-3 border-b border-pink-500/20">
+                                        <p className="text-purple-300/60 text-xs">Signed in as</p>
+                                        <p className="text-white text-sm font-medium truncate">{displayName}</p>
+                                    </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleLogout();
+                                        }}
+                                        className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                                    >
+                                        <LogOut size={16} />
+                                        <span className="text-sm font-medium">Sign Out</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Loading text */}
                 <div id="loading" className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
                     <h1
@@ -1445,7 +1545,7 @@ export default function Game2Page() {
                             50% { opacity: 1; }
                         }
                     `}</style>
-                    <div className="relative bg-slate-900/95 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
+                    <div className="relative bg-slate-900/70 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
                         {/* Subtle grid pattern */}
                         <div className="absolute inset-0 opacity-5" style={{
                             backgroundImage: `
@@ -1579,7 +1679,7 @@ export default function Game2Page() {
                           style={{
                               color: isCharging ? '#00ffff' : '#00ffcc',
                               textShadow: isCharging ? '0 0 10px #00ffff, 0 0 20px #00ffff' : '0 0 5px #00ffff',
-                              fontFamily: 'monospace',
+                              fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
                               letterSpacing: '0.1em'
                           }}
                     >
