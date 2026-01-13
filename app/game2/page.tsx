@@ -5,6 +5,112 @@ import Head from 'next/head';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as CANNON from 'cannon-es';
+
+// Helper function to create dice textures
+function createDiceTextures(): THREE.Texture[] {
+    const textures: THREE.Texture[] = [];
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return textures;
+
+    // Dice face configurations: number of dots and their positions
+    const faceConfigs = [
+        // Face 1: one dot in center
+        [{ x: 128, y: 128 }],
+        // Face 2: two dots
+        [{ x: 64, y: 64 }, { x: 192, y: 192 }],
+        // Face 3: three dots
+        [{ x: 64, y: 64 }, { x: 128, y: 128 }, { x: 192, y: 192 }],
+        // Face 4: four dots
+        [{ x: 64, y: 64 }, { x: 192, y: 64 }, { x: 64, y: 192 }, { x: 192, y: 192 }],
+        // Face 5: five dots
+        [{ x: 64, y: 64 }, { x: 192, y: 64 }, { x: 128, y: 128 }, { x: 64, y: 192 }, { x: 192, y: 192 }],
+        // Face 6: six dots
+        [{ x: 64, y: 64 }, { x: 192, y: 64 }, { x: 64, y: 128 }, { x: 192, y: 128 }, { x: 64, y: 192 }, { x: 192, y: 192 }]
+    ];
+
+    for (let face = 0; face < 6; face++) {
+        // Clear canvas with white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Add subtle gradient
+        const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(1, '#f0f0f0');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Draw border
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(2, 2, 252, 252);
+
+        // Draw dots for this face
+        ctx.fillStyle = face % 2 === 0 ? '#1a1a2e' : '#e74c3c'; // Alternate between dark blue and red
+        for (const dot of faceConfigs[face]) {
+            ctx.beginPath();
+            ctx.arc(dot.x, dot.y, 24, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Add shadow to dots
+            ctx.beginPath();
+            ctx.arc(dot.x + 2, dot.y + 2, 24, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
+            ctx.fillStyle = face % 2 === 0 ? '#1a1a2e' : '#e74c3c';
+        }
+
+        const texture = new THREE.CanvasTexture(canvas.cloneNode(true) as HTMLCanvasElement);
+        const tempCanvas = canvas.cloneNode(true) as HTMLCanvasElement;
+        const tempCtx = tempCanvas.getContext('2d');
+        if (tempCtx) {
+            tempCtx.drawImage(canvas, 0, 0);
+        }
+        const newTexture = new THREE.CanvasTexture(tempCanvas);
+        textures.push(newTexture);
+    }
+
+    return textures;
+}
+
+// Determine which face is up based on rotation
+function getDiceValue(diceBody: CANNON.Body): number {
+    // Three.js BoxGeometry face order: right, left, top, bottom, front, back
+    // These correspond to the texture array indices: 0, 1, 2, 3, 4, 5
+    // Local face normals for a cube (which face points in which direction)
+    const faces = [
+        { normal: new CANNON.Vec3(1, 0, 0), value: 1 },   // right (face 0)
+        { normal: new CANNON.Vec3(-1, 0, 0), value: 2 },  // left (face 1)
+        { normal: new CANNON.Vec3(0, 1, 0), value: 3 },   // top (face 2)
+        { normal: new CANNON.Vec3(0, -1, 0), value: 4 },  // bottom (face 3)
+        { normal: new CANNON.Vec3(0, 0, 1), value: 5 },   // front (face 4)
+        { normal: new CANNON.Vec3(0, 0, -1), value: 6 }   // back (face 5)
+    ];
+
+    let maxDot = -Infinity;
+    let topFace = 1;
+
+    for (const face of faces) {
+        // Transform local normal to world space
+        const worldNormal = new CANNON.Vec3();
+        diceBody.quaternion.vmult(face.normal, worldNormal);
+
+        // Dot product with up vector (0, 1, 0)
+        const dot = worldNormal.dot(new CANNON.Vec3(0, 1, 0));
+
+        if (dot > maxDot) {
+            maxDot = dot;
+            topFace = face.value;
+        }
+    }
+
+    return topFace;
+}
 
 export default function Game2Page() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,12 +122,11 @@ export default function Game2Page() {
     const rollDice = () => {
         if (isMoving) return;
 
-        const roll = Math.floor(Math.random() * 6) + 1;
-        setDiceValue(roll);
         setIsMoving(true);
+        setDiceValue(null);
 
-        // Trigger character move
-        const event = new CustomEvent('moveCharacter', { detail: { steps: roll } });
+        // Trigger dice roll animation via event
+        const event = new CustomEvent('rollDice', {});
         window.dispatchEvent(event);
     };
 
@@ -110,6 +215,69 @@ export default function Game2Page() {
         const pinkLight = new THREE.PointLight(0x8b00ff, 1, 50);
         pinkLight.position.set(-10, 10, -10);
         scene.add(pinkLight);
+
+        // ============ PHYSICS WORLD SETUP ============
+        const world = new CANNON.World();
+        world.gravity.set(0, -20, 0);
+        world.broadphase = new CANNON.NaiveBroadphase();
+
+        // Create physics floor (table surface)
+        const floorShape = new CANNON.Plane();
+        const floorBody = new CANNON.Body({ mass: 0 }); // Static body
+        floorBody.addShape(floorShape);
+        floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        floorBody.position.set(0, 10.6, 0); // Match the paper/tile height
+        world.addBody(floorBody);
+
+        // Create dice materials for better bouncing
+        const diceMaterial = new CANNON.Material('dice');
+        const floorMaterial = new CANNON.Material('floor');
+        const diceFloorContact = new CANNON.ContactMaterial(diceMaterial, floorMaterial, {
+            friction: 0.3,
+            restitution: 0.2 // Bounciness (0-1) - increased for more bounce
+        });
+        world.addContactMaterial(diceFloorContact);
+
+        // Create dice textures
+        const diceTextures = createDiceTextures();
+
+        // Create dice mesh
+        const diceSize = 0.21;
+        const diceGeometry = new THREE.BoxGeometry(diceSize, diceSize, diceSize);
+        const diceMaterials = diceTextures.map(texture =>
+            new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.3,
+                metalness: 0.1
+            })
+        );
+        const diceMesh = new THREE.Mesh(diceGeometry, diceMaterials);
+        diceMesh.castShadow = true;
+        diceMesh.receiveShadow = true;
+        diceMesh.visible = false; // Hide initially
+        scene.add(diceMesh);
+
+        // Create dice physics body
+        const diceShape = new CANNON.Box(new CANNON.Vec3(diceSize / 2, diceSize / 2, diceSize / 2));
+        const diceBody = new CANNON.Body({
+            mass: 1,
+            material: diceMaterial,
+            linearDamping: 0.5,
+            angularDamping: 0.5
+        });
+        diceBody.addShape(diceShape);
+        diceBody.position.set(0, 15, 0); // Start above the table
+        world.addBody(diceBody);
+
+        // Track dice state
+        let isDiceRolling = false;
+        let diceShouldFloat = true; // Dice should float when not rolling
+        let lastDiceVelocity = 0;
+        let velocityCheckCount = 0;
+        const VELOCITY_THRESHOLD = 0.1;
+        const STABLE_FRAMES_NEEDED = 30;
+
+        // ============ END PHYSICS SETUP ============
 
         // Create circular star texture
         const starCanvas = document.createElement('canvas');
@@ -548,6 +716,22 @@ export default function Game2Page() {
                 } else {
                     // Animation complete
                     introComplete = true;
+
+                    // Show dice and position it in front of camera
+                    if (character) {
+                        const distance = 0.8;
+                        const angle20 = (20 * Math.PI) / 180;
+                        const offset = new THREE.Vector3(
+                            -distance * Math.cos(angle20),
+                            0.5,
+                            -distance * Math.sin(angle20)
+                        );
+                        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                        const dicePosition = character.position.clone().add(offset);
+
+                        diceBody.position.set(dicePosition.x, dicePosition.y - 0.2, dicePosition.z);
+                        diceMesh.visible = true;
+                    }
                 }
             }
 
@@ -578,6 +762,65 @@ export default function Game2Page() {
                 camera.position.copy(character.position).add(offset);
                 controls.target.copy(character.position);
             }
+
+            // ============ PHYSICS UPDATE ============
+            // Step the physics world
+            world.step(1 / 60);
+
+            // Sync dice mesh with physics body (only if visible)
+            if (diceMesh.visible) {
+                // If dice should float, keep it at floating position
+                if (diceShouldFloat && character) {
+                    const distance = 1;
+                    const angle20 = (20 * Math.PI) / 180;
+                    const offset = new THREE.Vector3(
+                        -distance * Math.cos(angle20),
+                        0.5,
+                        -distance * Math.sin(angle20)
+                    );
+                    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                    const floatPosition = character.position.clone().add(offset);
+
+                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
+                    diceMesh.rotation.y += 0.02; // Slowly rotate while floating
+
+                    // Keep physics body synced with floating position
+                    diceBody.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
+                    diceBody.velocity.set(0, 0, 0);
+                    diceBody.angularVelocity.set(0, 0, 0);
+                } else {
+                    // Normal physics sync when rolling/landed
+                    diceMesh.position.set(diceBody.position.x, diceBody.position.y, diceBody.position.z);
+                    diceMesh.quaternion.set(diceBody.quaternion.x, diceBody.quaternion.y, diceBody.quaternion.z, diceBody.quaternion.w);
+                }
+            }
+
+            // Check if dice has landed
+            const currentVelocity = diceBody.velocity.length();
+            const angularVelocity = diceBody.angularVelocity.length();
+
+            if (isDiceRolling) {
+                if (currentVelocity < VELOCITY_THRESHOLD && angularVelocity < VELOCITY_THRESHOLD) {
+                    velocityCheckCount++;
+
+                    if (velocityCheckCount >= STABLE_FRAMES_NEEDED) {
+                        // Dice has stopped - determine the value
+                        const finalValue = getDiceValue(diceBody);
+                        setDiceValue(finalValue);
+                        isDiceRolling = false;
+                        velocityCheckCount = 0;
+
+                        // Trigger character movement after a short delay
+                        setTimeout(() => {
+                            const event = new CustomEvent('moveCharacter', { detail: { steps: finalValue } });
+                            window.dispatchEvent(event);
+                        }, 500);
+                    }
+                } else {
+                    velocityCheckCount = 0;
+                }
+            }
+            // ============ END PHYSICS UPDATE ============
 
             controls.update();
             renderer.render(scene, camera);
@@ -631,9 +874,74 @@ export default function Game2Page() {
             }
 
             setIsMoving(false);
+
+            // Return dice to floating state after character finishes moving
+            diceShouldFloat = true;
         };
 
         window.addEventListener('moveCharacter', moveCharacter);
+
+        // Handle dice roll
+        const rollDiceHandler = () => {
+            // Calculate dice spawn position based on character position (camera view at 20 degrees)
+            const distance = 1;
+            const angle20 = (20 * Math.PI) / 180;
+            const spawnOffset = new THREE.Vector3(
+                -distance * Math.cos(angle20),
+                0.5,
+                -distance * Math.sin(angle20)
+            );
+
+            // Apply character rotation to offset
+            spawnOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character!.rotation.y);
+
+            // Set dice position at character position with offset
+            const spawnPosition = character!.position.clone().add(spawnOffset);
+
+            // Reset dice position and apply random force
+            diceBody.position.set(spawnPosition.x, spawnPosition.y - 0.12, spawnPosition.z);
+            diceBody.velocity.set(0, 0, 0);
+            diceBody.angularVelocity.set(0, 0, 0);
+
+            // Random rotation
+            diceBody.quaternion.setFromEuler(
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2
+            );
+
+            // Calculate throw direction (toward the table center)
+            const throwDirection = new CANNON.Vec3(
+                -spawnPosition.x * 0.15,
+                3, // Upward force - reduced
+                -spawnPosition.z * 0.15
+            );
+
+            // Apply random impulse for throwing
+            const impulseStrength = 3; // Reduced from 8
+            const impulse = new CANNON.Vec3(
+                throwDirection.x + (Math.random() - 0.5) * impulseStrength,
+                throwDirection.y + Math.random() * impulseStrength * 0.5,
+                throwDirection.z + (Math.random() - 0.5) * impulseStrength
+            );
+            diceBody.applyImpulse(impulse);
+
+            // Apply random torque for spinning
+            const torqueStrength = 20; // Reduced from 50
+            const torque = new CANNON.Vec3(
+                (Math.random() - 0.5) * torqueStrength,
+                (Math.random() - 0.5) * torqueStrength,
+                (Math.random() - 0.5) * torqueStrength
+            );
+            diceBody.applyTorque(torque);
+
+            // Enable physics and disable floating
+            diceShouldFloat = false;
+            isDiceRolling = true;
+            velocityCheckCount = 0;
+        };
+
+        window.addEventListener('rollDice', rollDiceHandler);
 
         // Handle window resize
         const handleResize = () => {
@@ -647,6 +955,7 @@ export default function Game2Page() {
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('moveCharacter', moveCharacter);
+            window.removeEventListener('rollDice', rollDiceHandler);
             renderer.dispose();
             controls.dispose();
         };
