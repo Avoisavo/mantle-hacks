@@ -115,11 +115,14 @@ function getDiceValue(diceBody: CANNON.Body): number {
 export default function Game2Page() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const houseCanvasRef = useRef<HTMLCanvasElement>(null);
+    const houseContainerRef = useRef<HTMLDivElement>(null);
     const [diceValue, setDiceValue] = useState<number | null>(null);
     const [isMoving, setIsMoving] = useState(false);
     const [isCharging, setIsCharging] = useState(false);
     const [chargePower, setChargePower] = useState(0);
     const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [showTileOverlay, setShowTileOverlay] = useState(false);
 
     // Start charging when mouse/touch is pressed
     const startCharging = () => {
@@ -910,6 +913,11 @@ export default function Game2Page() {
 
             // Return dice to floating state after character finishes moving
             diceShouldFloat = true;
+
+            // Show tile overlay after movement completes
+            setTimeout(() => {
+                setShowTileOverlay(true);
+            }, 500);
         };
 
         window.addEventListener('moveCharacter', moveCharacter);
@@ -998,6 +1006,109 @@ export default function Game2Page() {
         };
     }, []);
 
+    // Separate scene for house display in overlay
+    useEffect(() => {
+        if (!houseCanvasRef.current || !houseContainerRef.current || !showTileOverlay) return;
+
+        const scene = new THREE.Scene();
+        // Transparent background - only show the house
+
+        const camera = new THREE.PerspectiveCamera(
+            50,
+            houseContainerRef.current.clientWidth / houseContainerRef.current.clientHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(5, 4, 5);
+        camera.lookAt(0, 1, 0);
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: houseCanvasRef.current,
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(houseContainerRef.current.clientWidth, houseContainerRef.current.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+
+        // Lighting for house scene
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        scene.add(directionalLight);
+
+        const pointLight = new THREE.PointLight(0xffd700, 0.8, 20);
+        pointLight.position.set(-3, 5, 3);
+        scene.add(pointLight);
+
+        // Load house model
+        const loader = new GLTFLoader();
+        let houseModel: THREE.Object3D | null = null;
+
+        loader.load(
+            '/game2/house_01.glb',
+            (gltf) => {
+                houseModel = gltf.scene;
+                houseModel.position.set(0, 0, 0);
+                houseModel.scale.set(0.5, 0.5, 0.5);
+                houseModel.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        const mesh = child as THREE.Mesh;
+                        mesh.castShadow = true;
+                        mesh.receiveShadow = true;
+                    }
+                });
+                scene.add(houseModel);
+                console.log('House loaded successfully');
+            },
+            (progress) => {
+                console.log('House loading:', (progress.loaded / progress.total * 100) + '%');
+            },
+            (error) => {
+                console.error('Error loading house:', error);
+            }
+        );
+
+        // Animation loop
+        let animationFrameId: number;
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            if (houseModel) {
+                houseModel.rotation.y += 0.005;
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle resize
+        const handleResize = () => {
+            if (!houseContainerRef.current) return;
+            const width = houseContainerRef.current.clientWidth;
+            const height = houseContainerRef.current.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        };
+        window.addEventListener('resize', handleResize);
+
+        // Cleanup
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            cancelAnimationFrame(animationFrameId);
+            renderer.dispose();
+        };
+    }, [showTileOverlay]);
+
     return (
         <>
             <Head>
@@ -1048,8 +1159,8 @@ export default function Game2Page() {
             <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
 
             {/* Dice Roll Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-50">
-                {diceValue !== null && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+                {diceValue !== null && isMoving && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
                         <canvas
                             ref={(canvas) => {
@@ -1131,6 +1242,42 @@ export default function Game2Page() {
                     {isMoving ? 'Moving...' : isCharging ? '🎲 Release!' : '🎲 Hold to Roll'}
                 </button>
             </div>
+
+            {/* Tile Overlay with split-screen layout */}
+            {showTileOverlay && (
+                <div className="absolute inset-0 flex z-40">
+                    {/* Unified blur layer behind everything */}
+                    <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
+
+                    {/* Left side - buttons (30%) */}
+                    <div className="w-[30%] relative flex flex-col justify-center items-center gap-6 p-6">
+                        {/* Option buttons */}
+                        <button
+                            onClick={() => setShowTileOverlay(false)}
+                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg"
+                        >
+                            ✅ End Turn
+                        </button>
+                        <button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                            💰 Pay
+                        </button>
+                        <button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                            🔄 Trade
+                        </button>
+                        <button className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                            💸 Bankrupt
+                        </button>
+                    </div>
+
+                    {/* Right side - house 3D scene (70%) */}
+                    <div className="w-[70%] relative">
+                        {/* House 3D Scene */}
+                        <div ref={houseContainerRef} className="w-full h-full relative">
+                            <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
         </>
     );
