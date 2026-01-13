@@ -261,7 +261,7 @@ export default function Game2Page() {
             // The dice floats in front of and slightly above the character
             // Based on the 20-degree camera angle and character positioning
             const diceX = canvas.width / 2; // Center of screen for straight up (90 degrees)
-            const diceY = canvas.height * 0.50; // Shorter arc - closer to button
+            const diceY = canvas.height * 0.80; // Shorter arc - closer to button
 
             // Number of lightning bolts based on charge power
             const numBolts = 2 + Math.floor(chargePower / 30);
@@ -1017,13 +1017,13 @@ export default function Game2Page() {
                         const angle20 = (20 * Math.PI) / 180;
                         const offset = new THREE.Vector3(
                             -distance * Math.cos(angle20),
-                            0.5,
+                            0.15,
                             -distance * Math.sin(angle20)
                         );
                         offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                         const dicePosition = character.position.clone().add(offset);
 
-                        diceBody.position.set(dicePosition.x, dicePosition.y - 0.2, dicePosition.z);
+                        diceBody.position.set(dicePosition.x, dicePosition.y - 0.55, dicePosition.z);
                         diceMesh.visible = true;
                     }
                 }
@@ -1065,17 +1065,17 @@ export default function Game2Page() {
             if (diceMesh.visible) {
                 // If dice should float, keep it at floating position
                 if (diceShouldFloat && character) {
-                    const distance = 1;
+                    const distance = 1.2;
                     const angle20 = (20 * Math.PI) / 180;
                     const offset = new THREE.Vector3(
                         -distance * Math.cos(angle20),
-                        0.5,
+                        0.18,
                         -distance * Math.sin(angle20)
                     );
                     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                     const floatPosition = character.position.clone().add(offset);
 
-                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
+                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.55, floatPosition.z);
 
                     // Rotate faster based on charge power when charging
                     if (isChargingRef.current) {
@@ -1088,7 +1088,7 @@ export default function Game2Page() {
                     }
 
                     // Keep physics body synced with floating position
-                    diceBody.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
+                    diceBody.position.set(floatPosition.x, floatPosition.y - 0.5, floatPosition.z);
                     diceBody.velocity.set(0, 0, 0);
                     diceBody.angularVelocity.set(0, 0, 0);
                 } else {
@@ -1537,70 +1537,6 @@ export default function Game2Page() {
                     </div>
                 )}
 
-                {/* Sci-fi Charge meter */}
-                {isCharging && (
-                    <div className="relative w-64 h-8">
-                        {/* Outer frame with sci-fi corners */}
-                        <div className="absolute inset-0 border-2 border-cyan-400 rounded-sm">
-                            {/* Corner accents */}
-                            <div className="absolute top-0 left-0 w-3 h-3 border-t-4 border-l-4 border-cyan-300"></div>
-                            <div className="absolute top-0 right-0 w-3 h-3 border-t-4 border-r-4 border-cyan-300"></div>
-                            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-4 border-l-4 border-cyan-300"></div>
-                            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-4 border-r-4 border-cyan-300"></div>
-                        </div>
-
-                        {/* Background grid */}
-                        <div className="absolute inset-1 bg-gray-900/80 overflow-hidden">
-                            <div className="absolute inset-0 opacity-20" style={{
-                                backgroundImage: `
-                                    linear-gradient(90deg, #00ffff 1px, transparent 1px),
-                                    linear-gradient(#00ffff 1px, transparent 1px)
-                                `,
-                                backgroundSize: '8px 8px'
-                            }}></div>
-                        </div>
-
-                        {/* Energy bar */}
-                        <div className="absolute inset-1 flex items-center">
-                            <div className="h-full relative overflow-hidden" style={{ width: `${chargePower}%` }}>
-                                {/* Animated energy gradient */}
-                                <div
-                                    className="h-full transition-all duration-75 ease-out relative"
-                                    style={{
-                                        background: `linear-gradient(90deg,
-                                            #00ffff 0%,
-                                            #00ff88 ${chargePower * 0.3}%,
-                                            #ffff00 ${chargePower * 0.6}%,
-                                            #ff8800 ${chargePower * 0.8}%,
-                                            #ff0044 100%
-                                        )`,
-                                        boxShadow: `0 0 ${chargePower * 0.2}px ${chargePower * 0.1}px rgba(0, 255, 255, 0.8)`
-                                    }}
-                                >
-                                    {/* Scanning line effect */}
-                                    <div className="absolute inset-0 animate-pulse" style={{
-                                        background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-                                        animation: 'scan 1s linear infinite'
-                                    }}></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Percentage text */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-cyan-300 font-mono text-sm font-bold text-shadow-glow">
-                                {Math.round(chargePower)}%
-                            </span>
-                        </div>
-
-                        {/* Outer glow */}
-                        <div className="absolute -inset-1 rounded-sm opacity-50" style={{
-                            boxShadow: `0 0 ${chargePower * 0.3}px ${chargePower * 0.15}px rgba(0, 255, 255, 0.6)`,
-                            animation: 'pulse-glow 0.5s ease-in-out infinite'
-                        }}></div>
-                    </div>
-                )}
-
                 <button
                     ref={buttonRef}
                     onMouseDown={startCharging}
@@ -1647,7 +1583,7 @@ export default function Game2Page() {
                               letterSpacing: '0.1em'
                           }}
                     >
-                        {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[INITIALIZE ROLL]'}
+                        {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
                     </span>
 
                     {/* Hover glow effect */}
