@@ -529,7 +529,7 @@ export default function Game2Page() {
         controls.target.set(0, 10.6, 0);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -1645,54 +1645,22 @@ export default function Game2Page() {
                     onTouchStart={startCharging}
                     onTouchEnd={releaseCharging}
                     disabled={isMoving}
-                    className="relative group disabled:opacity-50 select-none"
+                    className="relative disabled:opacity-50 select-none"
                     style={{
-                        background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                        background: 'rgba(10, 10, 26, 0.8)',
                         border: '2px solid #00ffff',
-                        boxShadow: isCharging ? '0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 20px rgba(0, 255, 255, 0.2)' : '0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 10px rgba(0, 255, 255, 0.1)',
-                        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
+                        boxShadow: isCharging ? '0 0 15px rgba(0, 255, 255, 0.5)' : 'none'
                     }}
                 >
-                    {/* Corner decorations */}
-                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-300"></div>
-                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-300"></div>
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-300"></div>
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-300"></div>
-
-                    {/* Animated border effect */}
-                    <div className="absolute inset-0 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-                        background: 'linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent)',
-                        animation: isCharging ? 'border-flow 0.5s linear infinite' : 'none'
-                    }}></div>
-
-                    {/* Grid background overlay */}
-                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
-                        backgroundImage: `
-                            linear-gradient(90deg, #00ffff 1px, transparent 1px),
-                            linear-gradient(#00ffff 1px, transparent 1px)
-                        `,
-                        backgroundSize: '10px 10px'
-                    }}></div>
-
-                    {/* Button content */}
-                    <span className="relative z-10 font-bold py-4 px-8 text-xl"
+                    <span className="font-bold py-3 px-6 text-lg block"
                           style={{
                               color: isCharging ? '#00ffff' : '#00ffcc',
-                              textShadow: isCharging ? '0 0 10px #00ffff, 0 0 20px #00ffff' : '0 0 5px #00ffff',
                               fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                              letterSpacing: '0.1em'
+                              letterSpacing: '0.05em'
                           }}
                     >
                         {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
                     </span>
-
-                    {/* Hover glow effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded"
-                         style={{
-                             background: 'radial-gradient(circle at center, rgba(0, 255, 255, 0.2) 0%, transparent 70%)',
-                             pointerEvents: 'none'
-                         }}
-                    ></div>
                 </button>
 
                 {/* Add custom styles */}
