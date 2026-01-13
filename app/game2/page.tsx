@@ -1335,8 +1335,8 @@ export default function Game2Page() {
             '/game2/house_01.glb',
             (gltf) => {
                 houseModel = gltf.scene;
-                houseModel.position.set(0, 1.8, 0);
-                houseModel.scale.set(2, 2, 2);
+                houseModel.position.set(0, 1.5, 0);
+                houseModel.scale.set(2.4, 2.4, 2.4);
                 houseModel.traverse((child) => {
                     if ((child as THREE.Mesh).isMesh) {
                         const mesh = child as THREE.Mesh;
@@ -1622,31 +1622,82 @@ export default function Game2Page() {
                     {/* Unified blur layer behind everything */}
                     <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
 
-                    {/* Left side - buttons (30%) */}
-                    <div className="w-[30%] relative flex flex-col justify-center items-center gap-6 p-6">
+                    {/* Left side - buttons (40%) */}
+                    <div className="w-[40%] relative flex flex-col justify-center items-end gap-4 p-8">
+                        <style jsx>{`
+                            @keyframes pulse-glow {
+                                0%, 100% { opacity: 0.5; }
+                                50% { opacity: 1; }
+                            }
+                        `}</style>
                         {/* Option buttons */}
                         <button
                             onClick={() => {
                                 setShowTileOverlay(false);
                                 setShowDiceResult(false);
                             }}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm"
+                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                            style={{
+                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                border: '2px solid #00ffff',
+                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                color: '#00ffcc',
+                                fontSize: '1.25rem',
+                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                            }}
                         >
-                            ✅ End Turn
+                            <span style={{ fontSize: '1.5rem' }}>✕</span>
+                            <span>END TURN</span>
                         </button>
-                        <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
-                            💰 Pay
+
+                        <button
+                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                            style={{
+                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                border: '2px solid #ffd700',
+                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                color: '#ffd700',
+                                fontSize: '1.25rem',
+                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.5rem' }}>💵</span>
+                            <span>PAY</span>
                         </button>
-                        <button className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
-                            🔄 Trade
+
+                        <button
+                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                            style={{
+                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                border: '2px solid #a855f7',
+                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                color: '#d8b4fe',
+                                fontSize: '1.25rem',
+                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.5rem' }}>⇄</span>
+                            <span>TRADE</span>
                         </button>
-                        <button className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
-                            💸 Bankrupt
+
+                        <button
+                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                            style={{
+                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                border: '2px solid #ef4444',
+                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                color: '#f87171',
+                                fontSize: '1.25rem',
+                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.5rem' }}>⚠</span>
+                            <span>BANKRUPT</span>
                         </button>
                     </div>
 
-                    {/* Right side - house 3D scene (70%) */}
-                    <div className="w-[70%] relative">
+                    {/* Right side - house 3D scene (60%) */}
+                    <div className="w-[60%] relative">
                         {/* House 3D Scene */}
                         <div ref={houseContainerRef} className="w-full h-full relative">
                             <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
