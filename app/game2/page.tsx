@@ -123,6 +123,7 @@ export default function Game2Page() {
     const [chargePower, setChargePower] = useState(0);
     const chargeIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [showTileOverlay, setShowTileOverlay] = useState(false);
+    const [introComplete, setIntroComplete] = useState(false);
 
     // Start charging when mouse/touch is pressed
     const startCharging = () => {
@@ -208,6 +209,7 @@ export default function Game2Page() {
         const phase2Duration = 1.5; // seconds
         let introComplete = false;
         let secondPhaseStarted = false;
+        let hasUpdatedIntroState = false;
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({
@@ -753,6 +755,12 @@ export default function Game2Page() {
                     // Animation complete
                     introComplete = true;
 
+                    // Update React state to show the roll button
+                    if (!hasUpdatedIntroState) {
+                        hasUpdatedIntroState = true;
+                        setIntroComplete(true);
+                    }
+
                     // Show dice and position it in front of camera
                     if (character) {
                         const distance = 0.8;
@@ -818,7 +826,15 @@ export default function Game2Page() {
                     const floatPosition = character.position.clone().add(offset);
 
                     diceMesh.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
-                    diceMesh.rotation.y += 0.02; // Slowly rotate while floating
+
+                    // Rotate faster based on charge power when charging
+                    if (isCharging) {
+                        const spinSpeed = 0.02 + (chargePower / 100) * 0.3; // 0.02 to 0.32 based on charge
+                        diceMesh.rotation.y += spinSpeed;
+                        diceMesh.rotation.x += spinSpeed * 0.5;
+                    } else {
+                        diceMesh.rotation.y += 0.02; // Slowly rotate while floating
+                    }
 
                     // Keep physics body synced with floating position
                     diceBody.position.set(floatPosition.x, floatPosition.y - 0.2, floatPosition.z);
@@ -1159,7 +1175,8 @@ export default function Game2Page() {
             <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
 
             {/* Dice Roll Button */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+            {introComplete && (
+                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
                 {diceValue !== null && isMoving && (
                     <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
                         <canvas
@@ -1242,6 +1259,7 @@ export default function Game2Page() {
                     {isMoving ? 'Moving...' : isCharging ? '🎲 Release!' : '🎲 Hold to Roll'}
                 </button>
             </div>
+            )}
 
             {/* Tile Overlay with split-screen layout */}
             {showTileOverlay && (
@@ -1254,17 +1272,17 @@ export default function Game2Page() {
                         {/* Option buttons */}
                         <button
                             onClick={() => setShowTileOverlay(false)}
-                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg"
+                            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm"
                         >
                             ✅ End Turn
                         </button>
-                        <button className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                        <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
                             💰 Pay
                         </button>
-                        <button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                        <button className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
                             🔄 Trade
                         </button>
-                        <button className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 text-lg">
+                        <button className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-bold py-5 px-8 rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 text-xl border-2 border-white/20 backdrop-blur-sm">
                             💸 Bankrupt
                         </button>
                     </div>
