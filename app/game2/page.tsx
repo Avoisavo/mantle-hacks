@@ -112,6 +112,14 @@ function getDiceValue(diceBody: CANNON.Body): number {
     return topFace;
 }
 
+// Player data interface
+interface Player {
+    id: number;
+    name: string;
+    balance: number;
+    image: string;
+}
+
 export default function Game2Page() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -132,6 +140,14 @@ export default function Game2Page() {
     const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
+
+    // Player state
+    const [players, setPlayers] = useState<Player[]>([
+        { id: 1, name: 'You', balance: 1500, image: '/game2/me.png' },
+        { id: 2, name: 'Player 2', balance: 1500, image: '/game2/player1.png' },
+        { id: 3, name: 'Player 3', balance: 1500, image: '/game2/player2.png' },
+        { id: 4, name: 'Player 4', balance: 1500, image: '/game2/player3.png' }
+    ]);
 
     // Start charging when mouse/touch is pressed
     const startCharging = () => {
@@ -1419,6 +1435,88 @@ export default function Game2Page() {
             }}></div>
 
             <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+
+            {/* Player Board Overlay - Top Left */}
+            {introComplete && (
+                <div className="absolute top-4 left-4 z-10">
+                    <style jsx>{`
+                        @keyframes pulse-border {
+                            0%, 100% { opacity: 0.5; }
+                            50% { opacity: 1; }
+                        }
+                    `}</style>
+                    <div className="relative bg-slate-900/95 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
+                        {/* Subtle grid pattern */}
+                        <div className="absolute inset-0 opacity-5" style={{
+                            backgroundImage: `
+                                linear-gradient(90deg, rgba(0, 255, 255, 0.3) 1px, transparent 1px),
+                                linear-gradient(rgba(0, 255, 255, 0.3) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '8px 8px'
+                        }} />
+
+                        {/* Corner accents */}
+                        <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/60 rounded-tl" />
+                        <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/60 rounded-tr" />
+                        <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/60 rounded-bl" />
+                        <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/60 rounded-br" />
+
+                        {players.map((player, index) => (
+                            <div key={player.id} className="relative">
+                                <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
+                                    {/* Player Image */}
+                                    <div className="relative w-12 h-12 flex-shrink-0">
+                                        {index === 0 && (
+                                            <>
+                                                {/* Rotating dashed ring for active player */}
+                                                <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
+                                                {/* Solid border */}
+                                                <div className="absolute -inset-0.5 rounded-lg border border-cyan-400/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
+                                            </>
+                                        )}
+                                        <div className="w-full h-full rounded-lg overflow-hidden bg-slate-800">
+                                            <img
+                                                src={player.image}
+                                                alt={player.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Player Name and Balance */}
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
+                                              style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
+                                            {player.name}
+                                        </span>
+                                        <span className="text-emerald-400 text-xs font-medium tracking-wider"
+                                              style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                                            ⬡ {player.balance.toLocaleString()}
+                                        </span>
+                                    </div>
+
+                                    {/* Active indicator */}
+                                    {index === 0 && (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 10px rgba(0, 255, 255, 0.9)' }} />
+                                            <div className="text-[8px] text-cyan-400 font-mono tracking-wider">ACT</div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Divider */}
+                                {index < players.length - 1 && (
+                                    <div className="relative h-px my-2 mx-1">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
+                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Lightning arc canvas */}
             <canvas
