@@ -117,7 +117,7 @@ export default function Home() {
   // Redirect if already logged in
   useEffect(() => {
     if (status === "authenticated" || connectedWallet) {
-      router.push("/game");
+      router.push("/game2");
     }
   }, [status, connectedWallet, router]);
 
@@ -156,7 +156,7 @@ export default function Home() {
     };
 
     if (status === "authenticated" || connectedWallet) {
-      router.push("/game");
+      router.push("/game2");
     } else {
       // Turn chicken red
       setChickenHit(true);
