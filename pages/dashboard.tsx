@@ -1,12 +1,13 @@
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useAccount, useDisconnect, useSignMessage, useBalance, useReadContract } from "wagmi";
+import { useAccount, useDisconnect, useSignMessage, useBalance, useReadContract, useWriteContract, useSwitchChain } from "wagmi";
 import { useEffect, useState } from "react";
 import Logo from "@/components/Logo";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
-import { TOWN_TOKEN_NATIVE_ADDRESS } from "@/utils/address";
+import { TOWN_TOPUP_NATIVE_ADDRESS, TOWN_TOKEN_NATIVE_ADDRESS } from "@/utils/address";
 import { ABI as TownTokenABI } from "@/utils/towntoken";
-import { formatEther } from "viem";
+import { ABI as TownTopUpNativeABI } from "@/utils/towntopnative";
+import { formatEther, parseEther } from "viem";
 
 interface SmartAccountData {
   accountAddress: string;
@@ -18,13 +19,59 @@ interface SmartAccountData {
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
-  const { address: connectedWallet } = useAccount();
+  const { address: connectedWallet, chainId } = useAccount();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
   const router = useRouter();
   const [accountData, setAccountData] = useState<SmartAccountData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { writeContract, isPending: isMinting } = useWriteContract();
+
   const CHAIN_ID = 5003;
+
+  const handleMintTown = async () => {
+    if (!connectedWallet) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    // Ensure we are on the right chain
+    if (chainId !== CHAIN_ID) {
+      try {
+        await switchChain({ chainId: CHAIN_ID });
+        // NOTE: switchChain is often async in wallet, but wagmi's switchChain might not wait.
+        // For better UX, we just return here and let the user click again, 
+        // or wait for the chain to change. 
+        // But most wallets will pop up the switch request.
+        return; 
+      } catch (err: any) {
+        alert(`Please switch to Mantle Sepolia manually. Error: ${err.message}`);
+        return;
+      }
+    }
+
+    try {
+      writeContract({
+        address: TOWN_TOPUP_NATIVE_ADDRESS as `0x${string}`,
+        abi: TownTopUpNativeABI,
+        functionName: "buyTOWN",
+        value: parseEther("0.1"), // Send 0.1 MNT
+        chainId: CHAIN_ID,
+      }, {
+        onSuccess: (hash) => {
+          alert(`Successfully bought TOWN! Transaction: ${hash}`);
+        },
+        onError: (err) => {
+          console.error("Purchase failed:", err);
+          alert(`Purchase failed: ${err.message}`);
+        }
+      });
+    } catch (err: any) {
+      console.error("Purchase error:", err);
+      alert(`Error: ${err.message}`);
+    }
+  };
 
   // -- WALLET BALANCES (EOA) --
   // Native MNT
@@ -360,6 +407,13 @@ export default function Dashboard() {
             transition={{ delay: 0.4 }}
             className="flex flex-wrap gap-4"
           >
+            <button 
+              onClick={handleMintTown}
+              disabled={isMinting}
+              className="px-6 py-3 bg-pink-500/20 border border-pink-400/50 rounded-full text-pink-300 font-semibold hover:bg-pink-500/30 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {isMinting ? "Minting..." : chainId !== CHAIN_ID ? "Switch to Mantle" : "mint TOWN"}
+            </button>
             <button className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-semibold hover:opacity-90 transition-opacity">
               Fund Account
             </button>
