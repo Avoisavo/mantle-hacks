@@ -9,6 +9,7 @@ interface NFTCardProps {
     description: string;
     color?: string;
     glowColor?: string;
+    contractAddress: string;
 }
 
 export default function NFTCard({
@@ -19,7 +20,8 @@ export default function NFTCard({
     price,
     description,
     color = '#00f0ff',
-    glowColor = '#00f0ff'
+    glowColor = '#00f0ff',
+    contractAddress
 }: NFTCardProps) {
     const [rotation, setRotation] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
@@ -452,7 +454,7 @@ export default function NFTCard({
                             {/* Title */}
                             <h3 style={{
                                 fontFamily: 'monospace',
-                                fontSize: '18px',
+                                fontSize: '14px',
                                 fontWeight: 'bold',
                                 color: '#fff',
                                 margin: '0 0 20px 0',
@@ -468,7 +470,7 @@ export default function NFTCard({
                                 background: 'rgba(0, 0, 0, 0.4)',
                                 borderRadius: '8px',
                                 padding: '20px',
-                                marginBottom: '20px',
+                                marginBottom: '10px',
                                 border: `1px solid ${color}30`,
                             }}>
                                 <div style={{
@@ -496,7 +498,7 @@ export default function NFTCard({
                                 display: 'grid',
                                 gridTemplateColumns: '1fr 1fr',
                                 gap: '12px',
-                                marginBottom: '20px',
+                                marginBottom: '5px',
                             }}>
                                 <div style={{
                                     background: 'rgba(0, 0, 0, 0.4)',
@@ -549,24 +551,32 @@ export default function NFTCard({
                             </div>
 
                             {/* Action Button */}
-                            <button style={{
-                                width: '100%',
-                                padding: '14px',
-                                background: `linear-gradient(90deg, ${color}20, ${color}40)`,
-                                color: color,
-                                border: `1px solid ${color}`,
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                fontFamily: 'monospace',
-                                cursor: 'pointer',
-                                textTransform: 'uppercase',
-                                letterSpacing: '2px',
-                                transition: 'all 0.3s',
-                                boxShadow: `0 0 20px ${glowColor}20`,
-                            }}>
-                                ACQUIRE ASSET
-                            </button>
+                            <a
+                                href={`https://sepolia.mantlescan.xyz/address/${contractAddress}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    padding: '14px',
+                                    background: `linear-gradient(90deg, ${color}20, ${color}40)`,
+                                    color: color,
+                                    border: `1px solid ${color}`,
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    fontFamily: 'monospace',
+                                    cursor: 'pointer',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '2px',
+                                    transition: 'all 0.3s',
+                                    boxShadow: `0 0 20px ${glowColor}20`,
+                                    textAlign: 'center',
+                                    textDecoration: 'none',
+                                }}
+                            >
+                                VIEW ON EXPLORER
+                            </a>
 
                             {/* Status Footer */}
                             <div style={{

@@ -194,7 +194,7 @@ export default function NFTPage() {
                         boxShadow: "0 0 15px #a78bfa40",
                         transition: "all 0.3s",
                     }}>
-                        🏠 HOME
+                        HOME
                     </Link>
                     <ConnectButton />
                 </div>
@@ -211,8 +211,8 @@ export default function NFTPage() {
                         WebkitTextFillColor: "transparent",
                         backgroundClip: "text",
                         textShadow: "0 0 60px rgba(167, 139, 250, 0.5)",
-                        fontFamily: "'Orbitron', 'Rajdhani', system-ui, sans-serif",
-                        letterSpacing: "4px",
+                        fontFamily: "system-ui, sans-serif",
+                        letterSpacing: "1px",
                     }}>
                         Premium NFT Collection
                     </h1>
@@ -220,7 +220,7 @@ export default function NFTPage() {
                         color: "#8b9dc3",
                         fontSize: "16px",
                         margin: 0,
-                        letterSpacing: "2px",
+                        letterSpacing: "0.5px",
                     }}>
                         Tokenized Real World Assets on Blockchain
                     </p>
@@ -234,10 +234,10 @@ export default function NFTPage() {
                     flexWrap: "wrap",
                 }}>
                     {[
-                        { label: "TOTAL ITEMS", value: "253", color: "#06b6d4" },
-                        { label: "FLOOR PRICE", value: "$3.5M", color: "#ec4899" },
-                        { label: "TOTAL VOLUME", value: "$100M", color: "#a78bfa" },
-                        { label: "OWNERS", value: "53", color: "#10b981" },
+                        { label: "TOTAL ITEMS", value: "4", color: "#06b6d4" },
+                        { label: "FLOOR PRICE", value: "$89K", color: "#ec4899" },
+                        { label: "TOTAL VOLUME", value: "$5.3M", color: "#a78bfa" },
+                        { label: "OWNERS", value: "4", color: "#10b981" },
                     ].map((stat, idx) => (
                         <div key={idx} style={{
                             background: "rgba(10, 10, 30, 0.8)",
@@ -252,8 +252,9 @@ export default function NFTPage() {
                                 color: stat.color,
                                 fontSize: "11px",
                                 marginBottom: "8px",
-                                letterSpacing: "2px",
-                                fontFamily: "monospace",
+                                letterSpacing: "1px",
+                                fontFamily: "system-ui, sans-serif",
+                                fontWeight: "600",
                             }}>
                                 {stat.label}
                             </div>
@@ -261,7 +262,7 @@ export default function NFTPage() {
                                 color: "#fff",
                                 fontSize: "28px",
                                 fontWeight: "bold",
-                                fontFamily: "'Orbitron', monospace",
+                                fontFamily: "system-ui, sans-serif",
                                 textShadow: `0 0 20px ${stat.color}`,
                             }}>
                                 {stat.value}
@@ -294,6 +295,7 @@ export default function NFTPage() {
                     rarity="Prime"
                     color="#f59e0b"
                     glowColor="#f59e0b"
+                    contractAddress="0x0CBfC37b9346f5Aa39fAaB7dc37330Bfa74D04F6"
                 />
 
                 {/* California Modern Home - Wealthy */}
@@ -306,6 +308,7 @@ export default function NFTPage() {
                     rarity="Elite"
                     color="#10b981"
                     glowColor="#10b981"
+                    contractAddress="0x3eAfB87575023DBa4537fFC87aC5d7E7537C55fD"
                 />
 
                 {/* Arizona Suburban - Middle Class */}
@@ -318,6 +321,7 @@ export default function NFTPage() {
                     rarity="Standard"
                     color="#3b82f6"
                     glowColor="#3b82f6"
+                    contractAddress="0x82068a566E4a1aE88FbdeBDbfdbFb8c1c4294B8b"
                 />
 
                 {/* Modest Apartment - Affordable */}
@@ -330,6 +334,7 @@ export default function NFTPage() {
                     rarity="Starter"
                     color="#8b5cf6"
                     glowColor="#8b5cf6"
+                    contractAddress="0xDdcD4075fc8a09Aa8db3Fe6a17640D77Aee22745"
                 />
             </div>
 
