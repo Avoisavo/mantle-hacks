@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Dependencies
-node_modules/
+# dependencies
+/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,56 +10,36 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Build outputs
-.next/
-out/
-build/
-dist/
+# testing
+/coverage
 
-# Hardhat
-cache/
-artifacts/
-typechain/
-typechain-types/
+# next.js
+/.next/
+/out/
 
-# Environment variables - NEVER COMMIT THESE
-.env
-.env*
-.env.local
-.env.*.local
+# production
+/build
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
+# misc
 .DS_Store
-Thumbs.db
+*.pem
 
-# Debug logs
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Testing
-coverage/
-coverage.json
-
-# Temporary files
-*.tmp
-*.temp
-*.pem
+# env files (can opt-in for committing if needed)
+.env*
 
 # Deployments - NEVER COMMIT THIS
 deployments/
 wallet.json
 
-# Vercel
+# vercel
 .vercel
 
-# TypeScript
+# typescript
 *.tsbuildinfo
 next-env.d.ts

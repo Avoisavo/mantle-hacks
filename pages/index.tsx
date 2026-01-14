@@ -7,8 +7,8 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
-import { LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogOut, Wallet, Play, Package, AlertCircle } from "lucide-react";
 
 // Dynamically import login components to avoid SSR issues
 const ConnectButton = dynamic(() => import("@/components/ConnectButton"), { ssr: false });
@@ -113,13 +113,64 @@ export default function Home() {
   const [chickenHit, setChickenHit] = useState(false);
   const [feathers, setFeathers] = useState<Array<{ id: number; x: number; y: number; rotation: number }>>([]);
   const [showModalDelayed, setShowModalDelayed] = useState(false);
+  const [showMainMenu, setShowMainMenu] = useState(false);
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
 
-  // Redirect if already logged in
+  // Get the active address (either from session or wallet)
+  const activeAddress = smartAccountAddress || connectedWallet;
+
+  // Auto-show menu when logged in
   useEffect(() => {
     if (status === "authenticated" || connectedWallet) {
-      router.push("/game2");
+      setShowMainMenu(true);
+    } else {
+      setShowMainMenu(false);
     }
-  }, [status, connectedWallet, router]);
+  }, [status, connectedWallet]);
+
+  // Fetch smart account if logged in via Google
+  useEffect(() => {
+    const fetchSmartAccount = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch("/api/account/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: session.user.email }),
+          });
+          const data = await response.json();
+          if (data.data?.accountAddress) {
+            setSmartAccountAddress(data.data.accountAddress);
+          }
+        } catch (e) {
+          console.error("Failed to fetch smart account", e);
+        }
+      }
+    };
+    fetchSmartAccount();
+  }, [session]);
+
+  // Check verification status when we have the active address
+  useEffect(() => {
+    const checkVerification = async () => {
+      if (activeAddress) {
+        try {
+          console.log("Checking verification for address:", activeAddress);
+          const response = await fetch(`/api/check-verification?address=${activeAddress}`);
+          const data = await response.json();
+          console.log("Verification response:", data);
+          setIsVerified(data.verified);
+        } catch (error) {
+          console.error('Failed to check verification status:', error);
+          setIsVerified(false);
+        }
+      } else {
+        setIsVerified(null);
+      }
+    };
+    checkVerification();
+  }, [activeAddress]);
 
   // Track mouse position for custom crosshair
   useEffect(() => {
@@ -156,7 +207,8 @@ export default function Home() {
     };
 
     if (status === "authenticated" || connectedWallet) {
-      router.push("/game2");
+      // Menu is already shown via useEffect, do nothing on tap
+      return;
     } else {
       // Turn chicken red
       setChickenHit(true);
@@ -189,8 +241,29 @@ export default function Home() {
         await disconnect();
       }
       setShowAccountMenu(false);
+      setShowMainMenu(false);
+      setIsVerified(null);
+      setSmartAccountAddress(null);
     } catch (error) {
       console.error("Logout failed:", error);
+    }
+  };
+
+  const handleStartGame = () => {
+    router.push("/game2");
+  };
+
+  const handleViewAssets = () => {
+    router.push("/dashboard");
+  };
+
+  const handleWalletClick = () => {
+    if (!isVerified) {
+      router.push("/identity");
+    } else {
+      // Handle top-up functionality
+      console.log("Top up clicked");
+      // TODO: Implement top-up flow
     }
   };
 
@@ -289,7 +362,40 @@ export default function Home() {
 
         {/* Account Display - Top Right */}
         {isLoggedIn && (
-          <div className="absolute top-6 right-6 z-40">
+          <div className="absolute top-6 right-6 z-40 flex items-center gap-3">
+            {/* Wallet/Verify Button */}
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWalletClick();
+                }}
+                className={`flex items-center gap-2 backdrop-blur-xl border rounded-full px-4 py-2 transition-all ${
+                  isVerified
+                    ? 'bg-black/40 border-white/40 hover:border-white/60'
+                    : 'bg-red-950/40 border-red-500/40 hover:border-red-400/60'
+                }`}
+              >
+                <Wallet
+                  size={16}
+                  className={isVerified ? 'text-white' : 'text-red-400'}
+                />
+                <span
+                  className={`text-sm font-medium ${
+                    isVerified ? 'text-white' : 'text-red-400'
+                  }`}
+                >
+                  {isVerified ? 'Top Up' : 'Verify'}
+                </span>
+                {!isVerified && (
+                  <AlertCircle size={14} className="text-red-400" />
+                )}
+              </motion.button>
+            </div>
+
+            {/* User Account Button */}
             <div className="relative">
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -387,9 +493,86 @@ export default function Home() {
             </h1>
           </div>
 
-          <div className="w-full h-full" style={{ zIndex: 1, position: "relative" }}>
-            <Model chickenHit={chickenHit} />
-          </div>
+          {/* Show 3D model or menu based on state */}
+          <AnimatePresence mode="wait">
+            {!showMainMenu ? (
+              <motion.div
+                key="model"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="w-full h-full"
+                style={{ zIndex: 1, position: "relative" }}
+              >
+                <Model chickenHit={chickenHit} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="menu"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="relative z-10 w-full flex flex-col items-center justify-center"
+                style={{ zIndex: 10, marginTop: '120px' }}
+              >
+                {/* Main Menu */}
+                <div className="flex flex-col items-center gap-6 w-full max-w-md px-6">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleStartGame}
+                    className="relative group w-full"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 to-purple-500/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
+                    <div className="relative bg-black/60 backdrop-blur-xl border-2 border-pink-500/50 rounded-2xl px-8 py-5 flex items-center justify-center gap-4 w-full">
+                      <Play size={28} className="text-pink-400" />
+                      <span
+                        className="text-2xl font-bold text-white"
+                        style={{ fontFamily: '"Luckiest Guy", cursive' }}
+                      >
+                        Start Game
+                      </span>
+                    </div>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleViewAssets}
+                    className="relative group w-full"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-blue-500/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
+                    <div className="relative bg-black/60 backdrop-blur-xl border-2 border-purple-500/50 rounded-2xl px-8 py-5 flex items-center justify-center gap-4 w-full">
+                      <Package size={28} className="text-purple-400" />
+                      <span
+                        className="text-2xl font-bold text-white"
+                        style={{ fontFamily: '"Luckiest Guy", cursive' }}
+                      >
+                        View My Assets
+                      </span>
+                    </div>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleLogout}
+                    className="relative group w-full"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/30 to-orange-500/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all"></div>
+                    <div className="relative bg-black/60 backdrop-blur-xl border-2 border-red-500/50 rounded-2xl px-8 py-5 flex items-center justify-center gap-4 w-full">
+                      <LogOut size={28} className="text-red-400" />
+                      <span
+                        className="text-2xl font-bold text-white"
+                        style={{ fontFamily: '"Luckiest Guy", cursive' }}
+                      >
+                        Sign Out
+                      </span>
+                    </div>
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Feather Animations */}
@@ -434,18 +617,20 @@ export default function Home() {
           </motion.div>
         ))}
 
-        {/* Tap to start text */}
-        <div className="absolute bottom-20 left-0 right-0 text-center z-10">
-          <p
-            className="text-white text-xl font-medium animate-pulse"
-            style={{
-              fontFamily: '"Luckiest Guy", cursive',
-              textShadow: "0 0 10px #ff00ff, 0 0 20px #8b00ff",
-            }}
-          >
-            Tap anywhere to start
-          </p>
-        </div>
+        {/* Tap to start text - only show when not logged in */}
+        {!isLoggedIn && (
+          <div className="absolute bottom-20 left-0 right-0 text-center z-10">
+            <p
+              className="text-white text-xl font-medium animate-pulse"
+              style={{
+                fontFamily: '"Luckiest Guy", cursive',
+                textShadow: "0 0 10px #ff00ff, 0 0 20px #8b00ff",
+              }}
+            >
+              Tap anywhere to start
+            </p>
+          </div>
+        )}
 
         {/* Login Modal */}
         {showModalDelayed && (

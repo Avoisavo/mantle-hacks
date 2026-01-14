@@ -7,8 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "swap": "npx tsx scripts/swap-mnt-to-town.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@alchemy/aa-accounts": "^3.19.0",
@@ -20,9 +19,9 @@
     "@react-three/fiber": "^9.5.0",
     "@splinetool/loader": "^1.12.32",
     "@splinetool/r3f-spline": "^1.0.2",
-    "@splinetool/runtime": "^1.12.32",
     "@tanstack/react-query": "^5.90.16",
     "@types/three": "^0.155.0",
+    "cannon-es": "^0.20.0",
     "clsx": "^2.1.1",
     "ethers": "^6.16.0",
     "framer-motion": "^12.24.10",
