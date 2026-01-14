@@ -93,13 +93,9 @@ export default function NFTCard({
                             zIndex: 2,
                             borderRadius: '12px',
                             background: 'linear-gradient(180deg, #0d0d1a 0%, #151525 50%, #0d0d1a 100%)',
-                            border: `3px solid ${color}`,
-                            boxShadow: `
-                            0 0 20px ${glowColor}80,
-                            0 0 40px ${glowColor}40,
-                            0 0 60px ${glowColor}20,
-                            inset 0 0 30px ${glowColor}15
-                        `,
+                            border: '4px solid #7f8c8d',
+                            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.5)',
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"), linear-gradient(180deg, #2c3e50 0%, #34495e 100%)`,
                             overflow: 'hidden',
                         }}
                     >
@@ -357,13 +353,9 @@ export default function NFTCard({
                             zIndex: 1,
                             borderRadius: '12px',
                             background: 'linear-gradient(180deg, #0d0d1a 0%, #151525 50%, #0d0d1a 100%)',
-                            border: `3px solid ${color}`,
-                            boxShadow: `
-                            0 0 20px ${glowColor}80,
-                            0 0 40px ${glowColor}40,
-                            0 0 60px ${glowColor}20,
-                            inset 0 0 30px ${glowColor}15
-                        `,
+                            border: '4px solid #7f8c8d',
+                            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.5)',
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E"), linear-gradient(180deg, #2c3e50 0%, #34495e 100%)`,
                             overflow: 'hidden',
                         }}
                     >
@@ -448,7 +440,7 @@ export default function NFTCard({
                                 borderBottom: `1px solid ${color}40`,
                                 paddingBottom: '10px',
                             }}>
-                            // ASSET DETAILS
+        
                             </div>
 
                             {/* Title */}

@@ -203,27 +203,16 @@ export default function NFTPage() {
                 <div style={{ textAlign: "center", marginBottom: "40px" }}>
                     <h1 style={{
                         color: "#fff",
-                        fontSize: "52px",
-                        fontWeight: "bold",
+                        fontSize: "42px",
+                        fontWeight: "800",
                         margin: "0 0 15px 0",
-                        background: "linear-gradient(90deg, #a78bfa 0%, #ec4899 50%, #06b6d4 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                        textShadow: "0 0 60px rgba(167, 139, 250, 0.5)",
                         fontFamily: "system-ui, sans-serif",
-                        letterSpacing: "1px",
+                        letterSpacing: "-0.5px",
+                        textTransform: "none",
                     }}>
-                        Premium NFT Collection
+                    MY NFT Collection
                     </h1>
-                    <p style={{
-                        color: "#8b9dc3",
-                        fontSize: "16px",
-                        margin: 0,
-                        letterSpacing: "0.5px",
-                    }}>
-                        Tokenized Real World Assets on Blockchain
-                    </p>
+
                 </div>
 
                 {/* Stats Bar */}
@@ -240,30 +229,26 @@ export default function NFTPage() {
                         { label: "OWNERS", value: "4", color: "#10b981" },
                     ].map((stat, idx) => (
                         <div key={idx} style={{
-                            background: "rgba(10, 10, 30, 0.8)",
-                            borderRadius: "8px",
-                            padding: "15px 30px",
-                            border: `2px solid ${stat.color}`,
-                            boxShadow: `0 0 20px ${stat.color}40, inset 0 0 20px ${stat.color}10`,
+                            padding: "10px 20px",
                             textAlign: "center",
-                            minWidth: "140px",
+                            minWidth: "120px",
                         }}>
                             <div style={{
-                                color: stat.color,
-                                fontSize: "11px",
-                                marginBottom: "8px",
+                                color: "#a0aec0",
+                                fontSize: "12px",
+                                marginBottom: "5px",
                                 letterSpacing: "1px",
                                 fontFamily: "system-ui, sans-serif",
                                 fontWeight: "600",
+                                textTransform: "uppercase",
                             }}>
                                 {stat.label}
                             </div>
                             <div style={{
                                 color: "#fff",
-                                fontSize: "28px",
+                                fontSize: "24px",
                                 fontWeight: "bold",
                                 fontFamily: "system-ui, sans-serif",
-                                textShadow: `0 0 20px ${stat.color}`,
                             }}>
                                 {stat.value}
                             </div>
@@ -290,7 +275,7 @@ export default function NFTPage() {
                     id={1001}
                     name="Manhattan Penthouse"
                     description="Tokenized luxury penthouse in Manhattan, NYC. Median income area >$200K+. 2,450 sq ft with panoramic city views. Annual yield: 8.5%"
-                    image="/manha.jpg"
+                    image="/nft/manha.jpg"
                     price="$2.8M"
                     rarity="Prime"
                     color="#f59e0b"

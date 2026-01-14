@@ -1,0 +1,706 @@
+[
+  {
+    "tokenId": 0,
+    "name": "Manhattan Penthouse",
+    "description": "Luxury penthouse in Manhattan, NYC. Median income >$200k.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/manha.jpg",
+    "localImage": "/nft/manha.jpg",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "New York, NY"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$2.8M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 1,
+    "name": "Scarsdale Estate",
+    "description": "Grand estate in Scarsdale, NY. Top-tier school district.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Scarsdale, NY"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$3.5M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 2,
+    "name": "Los Altos Mansion",
+    "description": "Modern mansion in Los Altos, CA. Silicon Valley prime location.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Los Altos, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$4.2M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 3,
+    "name": "West University Place Home",
+    "description": "Exclusive home in West University Place, TX.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "West University Place, TX"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$1.9M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 4,
+    "name": "Loudoun County Manor",
+    "description": "Spacious manor in Loudoun County, VA. Highest median income county.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Loudoun County, VA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$1.5M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 5,
+    "name": "Santa Clara Villa",
+    "description": "Tech-hub villa in Santa Clara, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Santa Clara, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$2.1M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 6,
+    "name": "San Mateo Residence",
+    "description": "Luxury residence in San Mateo, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "San Mateo, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$2.3M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 7,
+    "name": "Beverly Hills Estate",
+    "description": "Iconic estate in Beverly Hills, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Beverly Hills, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$5.5M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 8,
+    "name": "Greenwich Manor",
+    "description": "Historic manor in Greenwich, CT.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Greenwich, CT"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$3.8M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 9,
+    "name": "Atherton Residence",
+    "description": "Ultra-exclusive residence in Atherton, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/california.png",
+    "localImage": "/nft/california.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Wealthy"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Atherton, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$6.0M"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 10,
+    "name": "Phoenix Suburb Home",
+    "description": "Comfortable family home in Phoenix suburbs.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Phoenix, AZ"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$450K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 11,
+    "name": "Charlotte Family Home",
+    "description": "Spacious home in Charlotte suburbs.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Charlotte, NC"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$380K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 12,
+    "name": "Austin Modern House",
+    "description": "Modern house in Austin outskirts.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Austin, TX"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$550K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 13,
+    "name": "Long Beach Apartment",
+    "description": "Nice apartment in Long Beach, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Long Beach, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$600K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 14,
+    "name": "Denver Townhouse",
+    "description": "Townhouse in Denver, CO.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Denver, CO"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$520K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 15,
+    "name": "Nashville Cottage",
+    "description": "Cozy cottage in Nashville, TN.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Nashville, TN"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$420K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 16,
+    "name": "Portland Bungalow",
+    "description": "Charming bungalow in Portland, OR.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Portland, OR"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$480K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 17,
+    "name": "Atlanta Suburb House",
+    "description": "Large house in Atlanta suburbs.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Atlanta, GA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$350K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 18,
+    "name": "Raleigh Family Home",
+    "description": "Family home in Raleigh, NC.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Raleigh, NC"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$390K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 19,
+    "name": "Tampa Bay House",
+    "description": "House near the bay in Tampa, FL.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Tampa, FL"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$410K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 20,
+    "name": "Salt Lake City Home",
+    "description": "Home with mountain views in SLC, UT.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/middle.png",
+    "localImage": "/nft/middle.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Moderate"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Salt Lake City, UT"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$460K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 21,
+    "name": "Detroit Fixer-Upper",
+    "description": "Fixer-upper in Detroit, MI. High potential.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Detroit, MI"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$30K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 22,
+    "name": "Monroe Small House",
+    "description": "Small house in Monroe, LA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Monroe, LA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$45K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 23,
+    "name": "Pine Bluff Cottage",
+    "description": "Modest cottage in Pine Bluff, AR.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Pine Bluff, AR"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$35K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 24,
+    "name": "Little River Cabin",
+    "description": "Remote cabin in Little River, CA.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Little River, CA"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$55K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 25,
+    "name": "Pine Ridge Mobile Home",
+    "description": "Mobile home in Pine Ridge, SD.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Pine Ridge, SD"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$20K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 26,
+    "name": "Cleveland Old House",
+    "description": "Older home in Cleveland, OH.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Cleveland, OH"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$40K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 27,
+    "name": "Gary Small Home",
+    "description": "Small home in Gary, IN.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Gary, IN"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$25K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 28,
+    "name": "Camden Row House",
+    "description": "Row house in Camden, NJ.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Camden, NJ"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$50K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 29,
+    "name": "Youngstown House",
+    "description": "House in Youngstown, OH.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Youngstown, OH"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$32K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 30,
+    "name": "Flint Small House",
+    "description": "Small house in Flint, MI.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Flint, MI"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$28K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  },
+  {
+    "tokenId": 31,
+    "name": "Rural Mississippi Shack",
+    "description": "Rural property in Mississippi.",
+    "image": "https://raw.githubusercontent.com/mantle-hacks/assets/main/nft/verylow.png",
+    "localImage": "/nft/verylow.png",
+    "attributes": [
+      {
+        "trait_type": "Category",
+        "value": "Poor"
+      },
+      {
+        "trait_type": "Location",
+        "value": "Rural MS"
+      },
+      {
+        "trait_type": "Value",
+        "value": "$15K"
+      }
+    ],
+    "contractAddress": "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f"
+  }
+]

@@ -15,41 +15,38 @@ const CONTRACTS = [
 ];
 
 async function main() {
+    const CONTRACT_ADDRESS = "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f";
     const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
 
     // Load artifact
     const artifactPath = "./artifacts/contracts/mynft.sol/MyNFT.json";
     const artifact = JSON.parse(readFileSync(artifactPath, "utf8"));
 
-    console.log(`Checking metadata for ${CONTRACTS.length} contracts...\n`);
+    console.log(`Checking metadata for contract: ${CONTRACT_ADDRESS}\n`);
 
-    for (const c of CONTRACTS) {
-        const contract = new ethers.Contract(c.address, artifact.abi, provider);
-        console.log(`=== ${c.name} (${c.address}) ===`);
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, artifact.abi, provider);
 
+    // Check a few tokens
+    const tokensToCheck = [0, 15, 31];
+
+    for (const tokenId of tokensToCheck) {
+        console.log(`--- Token ID: ${tokenId} ---`);
         try {
-            const name = await contract.name();
-            const symbol = await contract.symbol();
-            console.log(`Contract Name: ${name}`);
-            console.log(`Contract Symbol: ${symbol}`);
-
-            const tokenId = 0; // Each contract has only 1 token (ID 0)
             const tokenURI = await contract.tokenURI(tokenId);
+            console.log(`Token URI (Raw): ${tokenURI.substring(0, 50)}...`);
 
             if (tokenURI.startsWith("data:application/json;base64,")) {
-                const base64Data = tokenURI.replace("data:application/json;base64,", "");
+                const base64Data = tokenURI.split(",")[1];
                 const jsonString = Buffer.from(base64Data, "base64").toString("utf8");
                 const metadata = JSON.parse(jsonString);
 
-                console.log("Token Name:", metadata.name);
-                console.log("Description:", metadata.description);
-                console.log("Image:", metadata.image);
-                console.log("Attributes:", metadata.attributes);
+                console.log("Decoded Metadata:");
+                console.log(JSON.stringify(metadata, null, 2));
             } else {
-                console.log("Token URI:", tokenURI);
+                console.log("Token URI is not base64 encoded JSON.");
             }
         } catch (error) {
-            console.error(`Error fetching metadata:`, error);
+            console.error(`Error fetching tokenURI for ${tokenId}:`, error);
         }
         console.log("\n");
     }
