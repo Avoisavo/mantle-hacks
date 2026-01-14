@@ -16,17 +16,17 @@ export default function GoogleLoginButton() {
     <motion.button
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98, y: 2 }}
       onClick={handleGoogleLogin}
-      className="w-full relative overflow-hidden group"
+      className="w-full relative group"
       style={{ cursor: "pointer" }}
     >
-      {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-600 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>
+      {/* Button Body */}
+      <div className="relative w-full bg-white rounded-2xl px-6 py-4 flex items-center justify-center gap-4 shadow-xl group-hover:shadow-2xl transition-all border border-white/10 overflow-hidden">
+        {/* Subtle sheen on hover */}
+        <div className="absolute top-0 left-[-100%] w-[50%] h-[200%] bg-gradient-to-r from-transparent via-black/5 to-transparent rotate-[30deg] group-hover:left-[150%] transition-all duration-1000 ease-in-out"></div>
 
-      {/* Button background */}
-      <div className="relative w-full bg-white/5 backdrop-blur-xl border border-pink-400/40 rounded-full px-6 py-3.5 flex items-center justify-center gap-3 hover:border-pink-300/60 transition-all duration-300">
         {/* Google Logo */}
         <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
           <path
@@ -48,7 +48,7 @@ export default function GoogleLoginButton() {
         </svg>
 
         {/* Text */}
-        <span className="text-white font-semibold text-base">
+        <span className="text-[#000080] font-bold text-lg" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
           Continue with Google
         </span>
       </div>

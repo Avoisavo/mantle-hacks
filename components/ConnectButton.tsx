@@ -74,16 +74,19 @@ export default function ConnectButton() {
                       }}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full relative overflow-hidden group"
+                      className="w-full relative group"
                       style={{ cursor: "pointer" }}
                     >
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>
+                      {/* Button Body */}
+                      <div className="relative w-full bg-gradient-to-b from-[#2e0b5d] to-[#1a0033] rounded-2xl px-6 py-4 flex items-center justify-center gap-3 border border-[#bffff4]/30 overflow-hidden shadow-2xl group-hover:border-[#bffff4]/60 transition-all">
+                        {/* High-end Rim Light (Mint) */}
+                        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bffff4]/80 to-transparent"></div>
+                        
+                        {/* Subtle sheen on hover */}
+                        <div className="absolute top-0 left-[-100%] w-[50%] h-[200%] bg-gradient-to-r from-transparent via-white/5 to-transparent rotate-[30deg] group-hover:left-[150%] transition-all duration-1000 ease-in-out"></div>
 
-                      {/* Button background */}
-                      <div className="relative w-full bg-white/5 backdrop-blur-xl border border-purple-400/40 rounded-full px-6 py-3.5 flex items-center justify-center gap-3 hover:border-purple-300/60 transition-all duration-300">
                         {/* Text */}
-                        <span className="text-white font-semibold text-base">
+                        <span className="text-[#bffff4] font-bold text-lg tracking-wide" style={{ fontFamily: '"Luckiest Guy", cursive' }}>
                           Connect Wallet
                         </span>
                       </div>

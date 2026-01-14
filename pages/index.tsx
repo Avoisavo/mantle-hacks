@@ -21,25 +21,35 @@ function ChickenGuy({ isHit }: { isHit: boolean }) {
   const originalMaterials = useRef<Map<THREE.MeshStandardMaterial, { color: number; emissive: number; emissiveIntensity: number; transparent: boolean; opacity: number }>>(new Map());
 
   useEffect(() => {
+    if (scene && originalMaterials.current.size === 0) {
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach((mat) => {
+            if (mat instanceof THREE.MeshStandardMaterial && !originalMaterials.current.has(mat)) {
+              originalMaterials.current.set(mat, {
+                color: mat.color.getHex(),
+                emissive: mat.emissive.getHex(),
+                emissiveIntensity: mat.emissiveIntensity,
+                transparent: mat.transparent,
+                opacity: mat.opacity,
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [scene]);
+
+  useEffect(() => {
     if (meshRef.current) {
       if (isHit) {
-        // Store original materials and change to red
+        // Change to red
         meshRef.current.traverse((child) => {
           if (child instanceof THREE.Mesh && child.material) {
             const materials = Array.isArray(child.material) ? child.material : [child.material];
             materials.forEach((mat) => {
               if (mat instanceof THREE.MeshStandardMaterial) {
-                // Store original properties if not already stored
-                if (!originalMaterials.current.has(mat)) {
-                  originalMaterials.current.set(mat, {
-                    color: mat.color.getHex(),
-                    emissive: mat.emissive.getHex(),
-                    emissiveIntensity: mat.emissiveIntensity,
-                    transparent: mat.transparent,
-                    opacity: mat.opacity,
-                  });
-                }
-                // Change to red
                 mat.color.setHex(0xff0000);
                 mat.emissive.setHex(0xff0000);
                 mat.emissiveIntensity = 0.2;
@@ -611,18 +621,25 @@ export default function Home() {
             onClick={(e) => {
               e.stopPropagation();
               setShowLoginModal(false);
+              setShowModalDelayed(false);
+              setChickenHit(false);
             }}
           >
             <div
               className="relative max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/30 to-purple-500/30 rounded-3xl blur-2xl"></div>
+              <div className="absolute inset-0 bg-[#bffff4]/5 rounded-3xl blur-3xl scale-110"></div>
 
-              <div className="relative bg-black/60 backdrop-blur-xl border border-pink-500/40 rounded-3xl p-8">
-                <h3 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-8" style={{ fontFamily: '"Chelsea Market", cursive' }}>
-                  Welcome to CoinTown
+              <div className="relative bg-[#130E22]/90 backdrop-blur-[20px] border border-white/20 rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
+                {/* Subtle Rim Light atop the modal */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#bffff4]/30 to-transparent"></div>
+                
+                {/* Subtle Scanlines - reduced opacity */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.05)_50%)] z-0 pointer-events-none bg-[length:100%_4px]"></div>
+
+                <h3 className="relative z-10 text-2xl font-bold text-center text-white mb-10 tracking-widest drop-shadow-[0_0_8px_rgba(191,255,244,0.3)]" style={{ fontFamily: '"Luckiest Guy", cursive' }}>
+                  MEMBER LOGIN
                 </h3>
 
                 {/* Google Login Button */}
@@ -632,9 +649,9 @@ export default function Home() {
 
                 {/* Divider */}
                 <div className="flex items-center gap-3 my-6">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
-                  <span className="text-purple-300/60 text-sm font-medium" style={{ fontFamily: '"Chelsea Market", cursive' }}>or</span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#bffff4]/40 to-transparent"></div>
+                  <span className="text-[#bffff4]/80 text-sm font-medium" style={{ fontFamily: '"Chelsea Market", cursive' }}>or</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#bffff4]/40 to-transparent"></div>
                 </div>
 
                 {/* Wallet Connect Button */}
@@ -653,7 +670,7 @@ export default function Home() {
                       localStorage.removeItem('wallet_connecting');
                     }
                   }}
-                  className="mt-6 w-full text-purple-300/60 text-sm hover:text-purple-300 transition-colors"
+                  className="mt-6 w-full text-[#bffff4]/60 text-sm hover:text-[#bffff4] transition-colors"
                   style={{ fontFamily: '"Chelsea Market", cursive' }}
                 >
                   Cancel

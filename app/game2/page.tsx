@@ -774,8 +774,10 @@ export default function Game2Page() {
 
         // GLTF Loader
         const loader = new GLTFLoader();
+        // FBX Loader
+        const fbxLoader = new FBXLoader();
         let loadedCount = 0;
-        const totalModels = 2;
+        const totalModels = 3;
 
         function checkLoaded() {
             loadedCount++;
@@ -951,55 +953,39 @@ export default function Game2Page() {
         let currentRotation = 0;
         let hasStarted = false;
 
-        loader.load(
-            '/game2/greenguy.glb',
-            (gltf) => {
-                character = gltf.scene;
-                character.position.set(firstTileX, 11, firstTileZ);
+        let characterMixer: THREE.AnimationMixer | null = null;
+
+        fbxLoader.load(
+            '/models/yellow-stand.fbx',
+            (fbx) => {
+                character = fbx;
+                character.position.set(firstTileX, 10.6, firstTileZ);
                 character.rotation.y = 0;
-                character.scale.set(0.4, 0.4, 0.4); // Made smaller (was 0.6)
+                character.scale.set(0.005, 0.005, 0.005);
                 character.traverse((child) => {
-                    if (child.isMesh) {
+                    if ((child as THREE.Mesh).isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
                 });
                 scene.add(character);
-                console.log('Character loaded successfully');
-                checkLoaded();
-            },
-            (progress) => {
-                console.log('Character loading:', (progress.loaded / progress.total * 100) + '%');
-            },
-            (error) => {
-                console.error('Error loading character:', error);
-                checkLoaded();
-            }
-        );
 
-        // Load yellow-stand.fbx character next to greenguy
-        const fbxLoader = new FBXLoader();
-        fbxLoader.load(
-            '/character/yellow-stand.fbx',
-            (fbx) => {
-                // Position it 2 units to the right of the main character
-                fbx.position.set(firstTileX + 2, 11, firstTileZ);
-                fbx.rotation.y = 0;
-                fbx.scale.set(0.01, 0.01, 0.01); // FBX models are usually larger, adjust scale as needed
-                fbx.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-                scene.add(fbx);
-                console.log('Yellow character loaded successfully');
+                // Setup animation
+                characterMixer = new THREE.AnimationMixer(character);
+                if (fbx.animations.length > 0) {
+                    const action = characterMixer.clipAction(fbx.animations[0]);
+                    action.play();
+                }
+
+                console.log('FBX Character loaded successfully');
+                checkLoaded();
             },
             (progress) => {
-                console.log('Yellow character loading:', (progress.loaded / progress.total * 100) + '%');
+                console.log('FBX Character loading:', (progress.loaded / progress.total * 100) + '%');
             },
             (error) => {
-                console.error('Error loading yellow character:', error);
+                console.error('Error loading FBX character:', error);
+                checkLoaded();
             }
         );
 
@@ -1009,6 +995,10 @@ export default function Game2Page() {
 
             const time = Date.now() * 0.001;
             const deltaTime = 0.016; // Approximate 60fps
+
+            if (characterMixer) {
+                characterMixer.update(deltaTime);
+            }
 
             // Intro camera animation
             if (!introComplete) {
@@ -1077,7 +1067,7 @@ export default function Game2Page() {
                         easeInOut
                     );
 
-                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 11, 0);
+                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 10.6, 0);
                     controls.target.lerp(targetLookAt, easeInOut);
                 } else {
                     // Animation complete
@@ -1231,7 +1221,7 @@ export default function Game2Page() {
 
                 await new Promise<void>((resolve) => {
                     const startPos = character!.position.clone();
-                    const endPos = new THREE.Vector3(targetPos.x, 11, targetPos.z);
+                    const endPos = new THREE.Vector3(targetPos.x, 10.6, targetPos.z);
                     const startRot = character!.rotation.y;
                     const targetRot = needsRotation ? startRot + Math.PI / 2 : startRot;
                     const duration = 300;
