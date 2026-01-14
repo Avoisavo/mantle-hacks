@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IIdentity.sol";
-
 /**
  * @title KYCRegistry
  * @dev Manages KYC status on-chain.
@@ -68,6 +67,17 @@ contract KYCRegistry is IIdentity, Ownable {
 
         address recovered = ethSignedHash.recover(signature);
         require(recovered == signerAddress, "Invalid Signature");
+
+        isVerified[msg.sender] = true;
+        emit KYCVerified(msg.sender);
+    }
+
+    /**
+     * @dev Allows anyone to self-verify without admin approval or signatures.
+     * Similar to TownTopUpNative's open buyTOWN function - everyone can access.
+     */
+    function selfVerify() external {
+        require(!isVerified[msg.sender], "Already verified");
 
         isVerified[msg.sender] = true;
         emit KYCVerified(msg.sender);

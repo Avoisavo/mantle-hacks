@@ -55,5 +55,8 @@
     "tailwindcss": "^4",
     "typechain": "^8.3.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "zod": "^3.25.76"
   }
 }
