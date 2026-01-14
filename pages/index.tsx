@@ -270,16 +270,6 @@ export default function Home() {
     router.push("/dashboard");
   };
 
-  const handleWalletClick = () => {
-    if (!isVerified) {
-      router.push("/identity");
-    } else {
-      // Handle top-up functionality
-      console.log("Top up clicked");
-      // TODO: Implement top-up flow
-    }
-  };
-
   const isLoggedIn = status === "authenticated" || connectedWallet;
   const displayName = session?.user?.name || connectedWallet?.slice(0, 6) + "..." + connectedWallet?.slice(-4);
   const displayImage = session?.user?.image;
@@ -290,6 +280,7 @@ export default function Home() {
         <title>CoinTown - 3D Monopoly Game</title>
         <meta name="description" content="Play the ultimate 3D monopoly game with Web3 integration" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chelsea+Market&family=Luckiest+Guy&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+Old+Uyghur&display=swap" rel="stylesheet" />
@@ -376,38 +367,6 @@ export default function Home() {
         {/* Account Display - Top Right */}
         {isLoggedIn && (
           <div className="absolute top-6 right-6 z-40 flex items-center gap-3">
-            {/* Wallet/Verify Button */}
-            <div className="relative">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleWalletClick();
-                }}
-                className={`flex items-center gap-2 backdrop-blur-xl border rounded-full px-4 py-2 transition-all ${
-                  isVerified
-                    ? 'bg-black/40 border-white/40 hover:border-white/60'
-                    : 'bg-red-950/40 border-red-500/40 hover:border-red-400/60'
-                }`}
-              >
-                <Wallet
-                  size={16}
-                  className={isVerified ? 'text-white' : 'text-red-400'}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    isVerified ? 'text-white' : 'text-red-400'
-                  }`}
-                >
-                  {isVerified ? 'Top Up' : 'Verify'}
-                </span>
-                {!isVerified && (
-                  <AlertCircle size={14} className="text-red-400" />
-                )}
-              </motion.button>
-            </div>
-
             {/* User Account Button */}
             <div className="relative">
               <motion.button

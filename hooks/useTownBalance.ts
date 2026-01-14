@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { formatUnits } from 'ethers';
+import { ethers } from 'ethers';
 
 const TOWN_TOKEN_ADDRESS = '0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49';
 const TOWN_TOKEN_ABI = [
@@ -22,16 +22,15 @@ export function useTownBalance() {
         const fetchBalance = async () => {
             try {
                 setIsLoading(true);
-                const { JsonRpcProvider, Contract } = await import('ethers');
-                const provider = new JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
-                const contract = new Contract(TOWN_TOKEN_ADDRESS, TOWN_TOKEN_ABI, provider);
+                const provider = new ethers.providers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
+                const contract = new ethers.Contract(TOWN_TOKEN_ADDRESS, TOWN_TOKEN_ABI, provider);
 
                 const [rawBalance, decimals] = await Promise.all([
                     contract.balanceOf(address),
                     contract.decimals()
                 ]);
 
-                const formatted = formatUnits(rawBalance, decimals);
+                const formatted = ethers.utils.formatUnits(rawBalance, decimals);
                 // Format to 2 decimal places
                 const balanceNum = parseFloat(formatted);
                 setBalance(balanceNum.toFixed(2));

@@ -64,24 +64,21 @@ async function swapMNTToTown(): Promise<void> {
     }
 
     // Setup provider and wallet
-    const provider = new ethers.JsonRpcProvider(MANTLE_SEPOLIA_RPC, {
-        chainId: CHAIN_ID,
-        name: "mantle-sepolia"
-    });
+    const provider = new ethers.providers.JsonRpcProvider(MANTLE_SEPOLIA_RPC);
 
     const wallet = new ethers.Wallet(privateKey, provider);
     console.log(`📍 Wallet Address: ${wallet.address}`);
 
     // Calculate amounts
-    const mntAmount = ethers.parseEther(mntAmountInput);
-    const expectedTown = mntAmount * RATE;
+    const mntAmount = ethers.utils.parseEther(mntAmountInput);
+    const expectedTown = mntAmount.mul(RATE.toString());
 
     // Check MNT balance
     const mntBalance = await provider.getBalance(wallet.address);
-    console.log(`💰 MNT Balance: ${ethers.formatEther(mntBalance)} MNT`);
+    console.log(`💰 MNT Balance: ${ethers.utils.formatEther(mntBalance)} MNT`);
 
-    if (mntBalance < mntAmount) {
-        throw new Error(`❌ Insufficient MNT balance. Need ${ethers.formatEther(mntAmount)} MNT, have ${ethers.formatEther(mntBalance)} MNT`);
+    if (mntBalance.lt(mntAmount)) {
+        throw new Error(`❌ Insufficient MNT balance. Need ${ethers.utils.formatEther(mntAmount)} MNT, have ${ethers.utils.formatEther(mntBalance)} MNT`);
     }
 
     // Connect to TownTopUp contract
@@ -102,18 +99,18 @@ async function swapMNTToTown(): Promise<void> {
     const townToken = new ethers.Contract(townTokenAddress, TOWN_TOKEN_ABI, wallet);
 
     // Get current TOWN balance
-    let townBalanceBefore = BigInt(0);
+    let townBalanceBefore = ethers.BigNumber.from(0);
     try {
         townBalanceBefore = await townToken.balanceOf(wallet.address);
-        console.log(`🏘️  TOWN Balance Before: ${ethers.formatEther(townBalanceBefore)} TOWN`);
+        console.log(`🏘️  TOWN Balance Before: ${ethers.utils.formatEther(townBalanceBefore)} TOWN`);
     } catch (error) {
         console.log("⚠️  Could not read TOWN balance");
     }
 
     console.log("\n" + "=".repeat(50));
     console.log("📤 Executing buyTOWN() Transaction...");
-    console.log(`   Sending: ${ethers.formatEther(mntAmount)} MNT`);
-    console.log(`   Expected: ${ethers.formatEther(expectedTown)} TOWN`);
+    console.log(`   Sending: ${ethers.utils.formatEther(mntAmount)} MNT`);
+    console.log(`   Expected: ${ethers.utils.formatEther(expectedTown)} TOWN`);
     console.log("=".repeat(50) + "\n");
 
     // Call buyTOWN() with MNT value
@@ -127,14 +124,14 @@ async function swapMNTToTown(): Promise<void> {
 
     // Get updated balances
     const mntBalanceAfter = await provider.getBalance(wallet.address);
-    console.log(`\n💰 MNT Balance After: ${ethers.formatEther(mntBalanceAfter)} MNT`);
+    console.log(`\n💰 MNT Balance After: ${ethers.utils.formatEther(mntBalanceAfter)} MNT`);
 
     try {
         const townBalanceAfter = await townToken.balanceOf(wallet.address);
-        console.log(`🏘️  TOWN Balance After: ${ethers.formatEther(townBalanceAfter)} TOWN`);
+        console.log(`🏘️  TOWN Balance After: ${ethers.utils.formatEther(townBalanceAfter)} TOWN`);
 
-        const townReceived = townBalanceAfter - townBalanceBefore;
-        console.log(`📈 TOWN Received: ${ethers.formatEther(townReceived)} TOWN`);
+        const townReceived = townBalanceAfter.sub(townBalanceBefore);
+        console.log(`📈 TOWN Received: ${ethers.utils.formatEther(townReceived)} TOWN`);
     } catch (error) {
         console.log("⚠️  Could not read TOWN balance after swap");
     }

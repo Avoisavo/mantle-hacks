@@ -177,10 +177,10 @@ export default function Dashboard() {
       if (!targetAddress) return;
 
       try {
-        const { JsonRpcProvider, Contract } = await import('ethers');
-        const provider = new JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+        const { ethers } = await import('ethers');
+        const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
         const abi = ["function hasPassed(address user) external view returns (bool)"];
-        const contract = new Contract("0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86", abi, provider);
+        const contract = new ethers.Contract("0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86", abi, provider);
         const passed = await contract.hasPassed(targetAddress);
         setIsVerified(passed);
       } catch (e) {

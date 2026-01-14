@@ -20,8 +20,3 @@ export const L2_CHAIN_ID = 5003;
 
 export const L1_MNT_TOKEN_ADDRESS = "0x65e37b558f64e2be5768db46df22f93d85741a9e";
 export const L2_MNT_TOKEN_ADDRESS = "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000";
-
-//==not use anymore
-// TownTopUp System on Mantle Sepolia
-export const TOWN_TOPUP_MANTLE_ADDRESS = "0xA3bD2356b1f2E4543912cA574aC692876d5b1456";
-export const TOWN_TOKEN_MANTLE_ADDRESS = "0x22CEc1678Ab59cbb8D53eCB78C1777730fEB6495";

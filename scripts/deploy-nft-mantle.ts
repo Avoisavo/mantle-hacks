@@ -20,15 +20,15 @@ async function main() {
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
     if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY not set in .env.local");
 
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
+    const provider = new ethers.providers.JsonRpcProvider(RPC);
     const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log(`Deployer: ${wallet.address}`);
 
     const balance = await provider.getBalance(wallet.address);
-    console.log(`Balance: ${ethers.formatEther(balance)} MNT\n`);
+    console.log(`Balance: ${ethers.utils.formatEther(balance)} MNT\n`);
 
-    if (balance === 0n) {
+    if (balance.isZero()) {
         throw new Error("Deployer has no MNT on Mantle Sepolia. Get some from the faucet first.");
     }
 
@@ -39,9 +39,9 @@ async function main() {
     console.log("📦 Deploying MyNFT contract to Mantle Sepolia...");
     const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
     const contract = await factory.deploy();
-    await contract.waitForDeployment();
+    await contract.deployed();
 
-    const contractAddress = await contract.getAddress();
+    const contractAddress = contract.address;
     console.log(`✅ Contract deployed to: ${contractAddress}\n`);
 
     // ========== STEP 2: Mint First NFT ==========

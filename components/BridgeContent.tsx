@@ -10,6 +10,7 @@ import {
 } from 'wagmi';
 import { sepolia, mantleSepoliaTestnet } from 'wagmi/chains';
 import { parseEther, formatEther, erc20Abi, formatUnits } from 'viem';
+import { ethers } from 'ethers';
 import { 
   L1_CHAIN_ID, 
   L2_CHAIN_ID, 
