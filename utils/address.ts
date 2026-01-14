@@ -7,7 +7,7 @@ export const MY_NFT_ADDRESS = "0x3B73Aa8c41e814424EE9f557D25282e1c7FCa23F";
 // MNT Token on Mantle Sepolia
 export const MNT_TOKEN_ADDRESS = "0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17";
 
-// TownTopUp Native (accepts native MNT directly - NEW!)
+// TownTopUp Native (accepts native MNT directly)
 export const TOWN_TOPUP_NATIVE_ADDRESS = "0x2e99559aE2d30dF514559C883Cfb9997f82a39bf";
 export const TOWN_TOKEN_NATIVE_ADDRESS = "0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49";
 
