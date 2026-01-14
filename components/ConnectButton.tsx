@@ -3,9 +3,11 @@
 import { ConnectButton as RainbowConnectButton } from "@rainbow-me/rainbowkit";
 import { motion } from "framer-motion";
 import { useConnect, injected } from "wagmi";
+import { useTownBalance } from "@/hooks/useTownBalance";
 
 export default function ConnectButton() {
   const { connect } = useConnect();
+  const { balance: townBalance } = useTownBalance();
 
   const isMobile = () => {
     if (typeof window === "undefined") return false;
@@ -128,10 +130,8 @@ export default function ConnectButton() {
                         <span className="text-white font-medium text-sm">
                           {account.displayName}
                         </span>
-                        <span className="text-white/70 text-xs">
-                          {account.displayBalance
-                            ? ` (${account.displayBalance})`
-                            : ""}
+                        <span className="text-cyan-400 text-xs font-bold">
+                          {townBalance} TOWN
                         </span>
                       </div>
                     </motion.button>

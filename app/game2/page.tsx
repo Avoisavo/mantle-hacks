@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as CANNON from 'cannon-es';
 import { useSession, signOut } from 'next-auth/react';
 import { useAccount, useDisconnect } from 'wagmi';
@@ -956,7 +957,7 @@ export default function Game2Page() {
                 character = gltf.scene;
                 character.position.set(firstTileX, 11, firstTileZ);
                 character.rotation.y = 0;
-                character.scale.set(0.6, 0.6, 0.6);
+                character.scale.set(0.4, 0.4, 0.4); // Made smaller (was 0.6)
                 character.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -973,6 +974,32 @@ export default function Game2Page() {
             (error) => {
                 console.error('Error loading character:', error);
                 checkLoaded();
+            }
+        );
+
+        // Load yellow-stand.fbx character next to greenguy
+        const fbxLoader = new FBXLoader();
+        fbxLoader.load(
+            '/character/yellow-stand.fbx',
+            (fbx) => {
+                // Position it 2 units to the right of the main character
+                fbx.position.set(firstTileX + 2, 11, firstTileZ);
+                fbx.rotation.y = 0;
+                fbx.scale.set(0.01, 0.01, 0.01); // FBX models are usually larger, adjust scale as needed
+                fbx.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(fbx);
+                console.log('Yellow character loaded successfully');
+            },
+            (progress) => {
+                console.log('Yellow character loading:', (progress.loaded / progress.total * 100) + '%');
+            },
+            (error) => {
+                console.error('Error loading yellow character:', error);
             }
         );
 
@@ -1527,144 +1554,144 @@ export default function Game2Page() {
                     </h1>
                 </div>
 
-            {/* Background blur layer */}
-            <div className="absolute inset-0" style={{
-                background: 'inherit',
-                filter: 'blur(1px)',
-                zIndex: 0
-            }}></div>
+                {/* Background blur layer */}
+                <div className="absolute inset-0" style={{
+                    background: 'inherit',
+                    filter: 'blur(1px)',
+                    zIndex: 0
+                }}></div>
 
-            <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+                <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
 
-            {/* Player Board Overlay - Top Left */}
-            {introComplete && (
-                <div className="absolute top-4 left-4 z-10">
-                    <style jsx>{`
+                {/* Player Board Overlay - Top Left */}
+                {introComplete && (
+                    <div className="absolute top-4 left-4 z-10">
+                        <style jsx>{`
                         @keyframes pulse-border {
                             0%, 100% { opacity: 0.5; }
                             50% { opacity: 1; }
                         }
                     `}</style>
-                    <div className="relative bg-slate-900/70 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
-                        {/* Subtle grid pattern */}
-                        <div className="absolute inset-0 opacity-5" style={{
-                            backgroundImage: `
+                        <div className="relative bg-slate-900/70 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
+                            {/* Subtle grid pattern */}
+                            <div className="absolute inset-0 opacity-5" style={{
+                                backgroundImage: `
                                 linear-gradient(90deg, rgba(0, 255, 255, 0.3) 1px, transparent 1px),
                                 linear-gradient(rgba(0, 255, 255, 0.3) 1px, transparent 1px)
                             `,
-                            backgroundSize: '8px 8px'
-                        }} />
+                                backgroundSize: '8px 8px'
+                            }} />
 
-                        {/* Corner accents */}
-                        <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/60 rounded-tl" />
-                        <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/60 rounded-tr" />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/60 rounded-bl" />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/60 rounded-br" />
+                            {/* Corner accents */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/60 rounded-tl" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/60 rounded-tr" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/60 rounded-bl" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/60 rounded-br" />
 
-                        {players.map((player, index) => (
-                            <div key={player.id} className="relative">
-                                <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
-                                    {/* Player Image */}
-                                    <div className="relative w-12 h-12 flex-shrink-0">
-                                        {index === 0 && (
-                                            <>
-                                                {/* Rotating dashed ring for active player */}
-                                                <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
-                                                {/* Solid border */}
-                                                <div className="absolute -inset-0.5 rounded-lg border border-cyan-400/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
-                                            </>
-                                        )}
-                                        <div className="w-full h-full rounded-lg overflow-hidden bg-slate-800">
-                                            <img
-                                                src={player.image}
-                                                alt={player.name}
-                                                className="w-full h-full object-cover"
-                                            />
+                            {players.map((player, index) => (
+                                <div key={player.id} className="relative">
+                                    <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
+                                        {/* Player Image */}
+                                        <div className="relative w-12 h-12 flex-shrink-0">
+                                            {index === 0 && (
+                                                <>
+                                                    {/* Rotating dashed ring for active player */}
+                                                    <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
+                                                    {/* Solid border */}
+                                                    <div className="absolute -inset-0.5 rounded-lg border border-cyan-400/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
+                                                </>
+                                            )}
+                                            <div className="w-full h-full rounded-lg overflow-hidden bg-slate-800">
+                                                <img
+                                                    src={player.image}
+                                                    alt={player.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
                                         </div>
+
+                                        {/* Player Name and Balance */}
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
+                                                style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
+                                                {player.name}
+                                            </span>
+                                            <span className="text-emerald-400 text-xs font-medium tracking-wider"
+                                                style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                                                ⬡ {player.balance.toLocaleString()}
+                                            </span>
+                                        </div>
+
+                                        {/* Active indicator */}
+                                        {index === 0 && (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 10px rgba(0, 255, 255, 0.9)' }} />
+                                                <div className="text-[8px] text-cyan-400 font-mono tracking-wider">ACT</div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Player Name and Balance */}
-                                    <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
-                                              style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
-                                            {player.name}
-                                        </span>
-                                        <span className="text-emerald-400 text-xs font-medium tracking-wider"
-                                              style={{ fontFamily: '"JetBrains Mono", monospace' }}>
-                                            ⬡ {player.balance.toLocaleString()}
-                                        </span>
-                                    </div>
-
-                                    {/* Active indicator */}
-                                    {index === 0 && (
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 10px rgba(0, 255, 255, 0.9)' }} />
-                                            <div className="text-[8px] text-cyan-400 font-mono tracking-wider">ACT</div>
+                                    {/* Divider */}
+                                    {index < players.length - 1 && (
+                                        <div className="relative h-px my-2 mx-1">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Divider */}
-                                {index < players.length - 1 && (
-                                    <div className="relative h-px my-2 mx-1">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
-                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Lightning arc canvas */}
-            <canvas
-                ref={lightningCanvasRef}
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: 15 }}
-            />
-
-            {/* Dice Roll Button */}
-            {introComplete && (
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
-                {showDiceResult && diceValue !== null && (
-                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
-                        <canvas
-                            ref={diceResultCanvasRef}
-                            className="w-20 h-20"
-                        />
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                <button
-                    ref={buttonRef}
-                    onMouseDown={startCharging}
-                    onMouseUp={releaseCharging}
-                    onMouseLeave={releaseCharging}
-                    onTouchStart={startCharging}
-                    onTouchEnd={releaseCharging}
-                    disabled={isMoving}
-                    className="relative disabled:opacity-50 select-none"
-                    style={{
-                        background: 'rgba(10, 10, 26, 0.8)',
-                        border: '2px solid #00ffff',
-                        boxShadow: isCharging ? '0 0 15px rgba(0, 255, 255, 0.5)' : 'none'
-                    }}
-                >
-                    <span className="font-bold py-3 px-6 text-lg block"
-                          style={{
-                              color: isCharging ? '#00ffff' : '#00ffcc',
-                              fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                              letterSpacing: '0.05em'
-                          }}
-                    >
-                        {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
-                    </span>
-                </button>
+                {/* Lightning arc canvas */}
+                <canvas
+                    ref={lightningCanvasRef}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ zIndex: 15 }}
+                />
 
-                {/* Add custom styles */}
-                <style jsx>{`
+                {/* Dice Roll Button */}
+                {introComplete && (
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+                        {showDiceResult && diceValue !== null && (
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+                                <canvas
+                                    ref={diceResultCanvasRef}
+                                    className="w-20 h-20"
+                                />
+                            </div>
+                        )}
+
+                        <button
+                            ref={buttonRef}
+                            onMouseDown={startCharging}
+                            onMouseUp={releaseCharging}
+                            onMouseLeave={releaseCharging}
+                            onTouchStart={startCharging}
+                            onTouchEnd={releaseCharging}
+                            disabled={isMoving}
+                            className="relative disabled:opacity-50 select-none"
+                            style={{
+                                background: 'rgba(10, 10, 26, 0.8)',
+                                border: '2px solid #00ffff',
+                                boxShadow: isCharging ? '0 0 15px rgba(0, 255, 255, 0.5)' : 'none'
+                            }}
+                        >
+                            <span className="font-bold py-3 px-6 text-lg block"
+                                style={{
+                                    color: isCharging ? '#00ffff' : '#00ffcc',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    letterSpacing: '0.05em'
+                                }}
+                            >
+                                {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
+                            </span>
+                        </button>
+
+                        {/* Add custom styles */}
+                        <style jsx>{`
                     @keyframes scan {
                         0% { transform: translateY(-100%); }
                         100% { transform: translateY(100%); }
@@ -1681,99 +1708,99 @@ export default function Game2Page() {
                         text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
                     }
                 `}</style>
-            </div>
-            )}
+                    </div>
+                )}
 
-            {/* Tile Overlay with split-screen layout */}
-            {showTileOverlay && (
-                <div className="absolute inset-0 flex z-40">
-                    {/* Unified blur layer behind everything */}
-                    <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
+                {/* Tile Overlay with split-screen layout */}
+                {showTileOverlay && (
+                    <div className="absolute inset-0 flex z-40">
+                        {/* Unified blur layer behind everything */}
+                        <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
 
-                    {/* Left side - buttons (40%) */}
-                    <div className="w-[40%] relative flex flex-col justify-center items-end gap-4 p-8">
-                        <style jsx>{`
+                        {/* Left side - buttons (40%) */}
+                        <div className="w-[40%] relative flex flex-col justify-center items-end gap-4 p-8">
+                            <style jsx>{`
                             @keyframes pulse-glow {
                                 0%, 100% { opacity: 0.5; }
                                 50% { opacity: 1; }
                             }
                         `}</style>
-                        {/* Option buttons */}
-                        <button
-                            onClick={() => {
-                                setShowTileOverlay(false);
-                                setShowDiceResult(false);
-                            }}
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #00ffff',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#00ffcc',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>✕</span>
-                            <span>END TURN</span>
-                        </button>
+                            {/* Option buttons */}
+                            <button
+                                onClick={() => {
+                                    setShowTileOverlay(false);
+                                    setShowDiceResult(false);
+                                }}
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #00ffff',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#00ffcc',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>✕</span>
+                                <span>END TURN</span>
+                            </button>
 
-                        <button
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #ffd700',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#ffd700',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>💵</span>
-                            <span>PAY</span>
-                        </button>
+                            <button
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #ffd700',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#ffd700',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>💵</span>
+                                <span>PAY</span>
+                            </button>
 
-                        <button
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #a855f7',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#d8b4fe',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>⇄</span>
-                            <span>TRADE</span>
-                        </button>
+                            <button
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #a855f7',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#d8b4fe',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>⇄</span>
+                                <span>TRADE</span>
+                            </button>
 
-                        <button
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #ef4444',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#f87171',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>⚠</span>
-                            <span>BANKRUPT</span>
-                        </button>
-                    </div>
+                            <button
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #ef4444',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#f87171',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>⚠</span>
+                                <span>BANKRUPT</span>
+                            </button>
+                        </div>
 
-                    {/* Right side - house 3D scene (60%) */}
-                    <div className="w-[60%] relative">
-                        {/* House 3D Scene */}
-                        <div ref={houseContainerRef} className="w-full h-full relative">
-                            <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                        {/* Right side - house 3D scene (60%) */}
+                        <div className="w-[60%] relative">
+                            {/* House 3D Scene */}
+                            <div ref={houseContainerRef} className="w-full h-full relative">
+                                <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
         </>
     );
 }

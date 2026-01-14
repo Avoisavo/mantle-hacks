@@ -12,7 +12,8 @@ const KYC_REGISTRY_ABI = [
 ];
 
 const SIGNER_PRIVATE_KEY = process.env.RELAY_PRIVATE_KEY;
-const KYC_REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_KYC_ADDRESS;
+// Updated to use the deployed KYC Registry address directly
+const KYC_REGISTRY_ADDRESS = "0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86";
 const RPC_URL = process.env.MANTLE_RPC_URL || "https://rpc.sepolia.mantle.xyz";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -48,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // If dummy signature from Trusted Smart Account Flow, we skip verifyMessage
         // In a Production app, we would verify the Session Token on server side here to ensure request comes from authenticated user.
         // For Hackathon, we'll check if signature is the "zero signature" we configured.
-        
+
         let skipSigCheck = false;
         if (signature === "0x" + "00".repeat(65)) {
             // We blindly trust this for now because the frontend only sends this if session exists.
