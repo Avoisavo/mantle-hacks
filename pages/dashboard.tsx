@@ -1,10 +1,12 @@
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useSignMessage, useBalance, useReadContract } from "wagmi";
 import { useEffect, useState } from "react";
 import Logo from "@/components/Logo";
 import { motion } from "framer-motion";
-import { useSignMessage } from "wagmi";
 import { useRouter } from "next/router";
+import { TOWN_TOKEN_NATIVE_ADDRESS } from "@/utils/address";
+import { ABI as TownTokenABI } from "@/utils/towntoken";
+import { formatEther } from "viem";
 
 interface SmartAccountData {
   accountAddress: string;
@@ -21,6 +23,52 @@ export default function Dashboard() {
   const router = useRouter();
   const [accountData, setAccountData] = useState<SmartAccountData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const CHAIN_ID = 5003;
+
+  // -- WALLET BALANCES (EOA) --
+  // Native MNT
+  const { data: walletMntBalance } = useBalance({
+    address: connectedWallet,
+    chainId: CHAIN_ID,
+  });
+
+  // TOWN Token (ERC20) - Explicitly using useReadContract to avoid MNT fallback
+  const { data: walletTownBalance, error: walletTownError } = useReadContract({
+    address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
+    abi: TownTokenABI,
+    functionName: "balanceOf",
+    args: connectedWallet ? [connectedWallet] : undefined,
+    chainId: CHAIN_ID,
+  });
+
+  // -- SMART ACCOUNT BALANCES --
+  // TOWN Token (ERC20) for Smart Account
+  const { data: smartAccountTownBalance, error: smartAccountTownError } = useReadContract({
+    address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
+    abi: TownTokenABI,
+    functionName: "balanceOf",
+    args: accountData?.accountAddress ? [accountData.accountAddress as `0x${string}`] : undefined,
+    chainId: CHAIN_ID,
+  });
+
+  const { chain, isConnected } = useAccount();
+
+  console.log("Dashboard Debug:", {
+    isConnected,
+    connectedWallet,
+    currentChain: chain?.name,
+    chainID: chain?.id,
+    targetChainID: CHAIN_ID,
+    townTokenAddress: TOWN_TOKEN_NATIVE_ADDRESS,
+    walletMntBalance: walletMntBalance ? formatEther(walletMntBalance.value) : "undefined",
+    walletTownBalanceRaw: walletTownBalance?.toString(),
+    walletTownError: walletTownError?.message,
+    smartAccountAddress: accountData?.accountAddress,
+    smartAccountMntBalance: accountData?.balance,
+    smartAccountTownBalance: smartAccountTownBalance?.toString(),
+    smartAccountTownError: smartAccountTownError?.message
+  });
 
   const handleSignOut = async () => {
     // Sign out from NextAuth (Google)
@@ -47,30 +95,38 @@ export default function Dashboard() {
       try {
         setLoading(true);
 
-        // If logged in with Google (Web2)
+        let emailOrAddress = "";
         if (session?.user?.email) {
-          const response = await fetch("/api/account/create", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: session.user.email }),
-          });
-
-          const data = await response.json();
-          if (data.success) {
-            setAccountData(data.data);
-          }
+          emailOrAddress = session.user.email;
+        } else if (connectedWallet) {
+          emailOrAddress = connectedWallet;
         }
-        // If connected with wallet (Web3)
-        else if (connectedWallet) {
+
+        if (emailOrAddress) {
           const response = await fetch("/api/account/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: connectedWallet }),
+            body: JSON.stringify({ email: emailOrAddress }),
           });
 
           const data = await response.json();
           if (data.success) {
-            setAccountData(data.data);
+            const accData = data.data;
+            
+            // Also fetch current balance
+            try {
+              console.log("Fetching balance for smart account:", accData.accountAddress);
+              const balanceRes = await fetch(`/api/account/balance?address=${accData.accountAddress}`);
+              const balanceData = await balanceRes.json();
+              console.log("Smart account balance response:", balanceData);
+              if (balanceData.success) {
+                accData.balance = balanceData.data.balanceInMNT;
+              }
+            } catch (e) {
+              console.error("Failed to fetch smart account balance", e);
+            }
+            
+            setAccountData(accData);
           }
         }
       } catch (error) {
@@ -120,10 +176,6 @@ export default function Dashboard() {
     }
   }, [accountData, connectedWallet]);
 
-  // REAL IMPLEMENTATION: We'll modify the UI to conditionally show the badge based on a new state `isVerified`.
-  // To populate `isVerified`, we really need that contract check. 
-  // I will add a `useEffect` that uses `ethers` (dynamically imported or from standard lib) to check `hasPassed`.
-  
   useEffect(() => {
       const checkVerification = async () => {
           const targetAddress = accountData?.accountAddress || connectedWallet;
@@ -224,11 +276,19 @@ export default function Dashboard() {
                     </p>
                   </div>
                   {accountData?.exists && (
-                    <div>
-                      <p className="text-purple-300/60 text-sm">Balance</p>
-                      <p className="text-purple-200 font-mono">
-                        {accountData.balance ? `${parseFloat(accountData.balance).toFixed(4)} MNT` : "0 MNT"}
-                      </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-purple-300/60 text-sm">MNT Balance</p>
+                        <p className="text-purple-200 font-mono font-bold">
+                          {accountData.balance !== undefined ? `${Number(accountData.balance).toFixed(4)} MNT` : "0.0000 MNT"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-purple-300/60 text-sm">TOWN Balance</p>
+                        <p className="text-pink-300 font-mono font-bold">
+                          {smartAccountTownBalance ? `${parseFloat(formatEther(smartAccountTownBalance as bigint)).toFixed(2)} TOWN` : "0.00 TOWN"}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -268,9 +328,23 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="text-purple-300/60 text-sm">Wallet Address</p>
-                        <p className="text-purple-200 font-mono text-sm break-all">
+                        <p className="text-purple-200 font-mono text-sm break-all mb-4">
                           {connectedWallet}
                         </p>
+                      </div>
+                      <div className="pt-3 border-t border-purple-500/20">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-purple-300/60 text-sm">MNT Balance</span>
+                          <span className="text-purple-200 font-mono font-bold">
+                            {walletMntBalance ? `${Number(formatEther(walletMntBalance.value)).toFixed(4)} MNT` : "..."}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-purple-300/60 text-sm">TOWN Balance</span>
+                          <span className="text-pink-300 font-mono font-bold">
+                            {walletTownBalance !== undefined ? `${parseFloat(formatEther(walletTownBalance as bigint)).toFixed(2)} TOWN` : "0.00 TOWN"}
+                          </span>
+                        </div>
                       </div>
                     </>
                   ) : null}
