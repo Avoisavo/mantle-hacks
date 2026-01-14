@@ -28,7 +28,7 @@ export default async function handler(
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
     const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
 
     const isVerified = await contract.hasPassed(address);

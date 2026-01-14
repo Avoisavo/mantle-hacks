@@ -19,15 +19,15 @@ async function main() {
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
     if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY not set in .env.local");
 
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
+    const provider = new ethers.providers.JsonRpcProvider(RPC);
     const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log(`Deployer: ${wallet.address}`);
 
     const balance = await provider.getBalance(wallet.address);
-    console.log(`Balance: ${ethers.formatEther(balance)} MNT`);
+    console.log(`Balance: ${ethers.utils.formatEther(balance)} MNT`);
 
-    if (balance === 0n) {
+    if (balance.isZero()) {
         throw new Error("Deployer has no MNT on Mantle Sepolia. Get some from a faucet first.");
     }
 
@@ -45,9 +45,9 @@ async function main() {
     // Deploy contract (no constructor arguments needed)
     const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
     const contract = await factory.deploy();
-    await contract.waitForDeployment();
+    await contract.deployed();
 
-    const address = await contract.getAddress();
+    const address = contract.address;
     const townToken = await (contract as any).town();
     const rate = await (contract as any).RATE();
 

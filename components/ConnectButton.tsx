@@ -61,30 +61,41 @@ export default function ConnectButton() {
               {(() => {
                 if (!connected) {
                   return (
-                    <motion.button
-                      onClick={() => {
-                        if (isMobile()) {
-                          openConnectModal();
-                        } else {
-                          handleConnect();
-                        }
-                      }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full relative overflow-hidden group"
-                      style={{ cursor: "pointer" }}
-                    >
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-xl opacity-60 group-hover:opacity-80 transition-opacity duration-300 rounded-full"></div>
-
-                      {/* Button background */}
-                      <div className="relative w-full bg-white/5 backdrop-blur-xl border border-purple-400/40 rounded-full px-6 py-3.5 flex items-center justify-center gap-3 hover:border-purple-300/60 transition-all duration-300">
-                        {/* Text */}
-                        <span className="text-white font-semibold text-base">
-                          Connect Wallet
-                        </span>
-                      </div>
-                    </motion.button>
+                      <motion.button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('wallet_connecting', 'true');
+                          }
+                          if (isMobile()) {
+                            openConnectModal();
+                          } else {
+                            handleConnect();
+                          }
+                        }}
+                        animate={{ scale: [1, 1.02, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full relative group"
+                        style={{ cursor: "pointer" }}
+                      >
+                        {/* High-Energy Action Puck Button */}
+                        <div className="relative w-full bg-gradient-to-r from-[#26D07C] to-[#00F0FF] rounded-[30px] px-8 py-5 flex items-center justify-center gap-3 border-[4px] border-white shadow-[0_8px_0_#0891b2] hover:shadow-[0_4px_0_#0891b2] hover:translate-y-[4px] active:shadow-none active:translate-y-[8px] transition-all overflow-hidden group">
+                          {/* Inner Gloss / Sheen */}
+                          <div className="absolute top-0 left-0 right-0 h-1/2 bg-white/20 blur-sm"></div>
+                          <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-[35deg] group-hover:left-[100%] transition-all duration-1000 ease-in-out"></div>
+                          
+                          {/* Text Content */}
+                          <div className="flex items-center gap-3 relative z-10">
+                            <svg className="w-6 h-6 text-[#001f3f] fill-current" viewBox="0 0 24 24">
+                              <path d="M13 2L3 14h9v8l10-12h-9l1 10z" />
+                            </svg>
+                            <span className="text-[#001f3f] font-black text-xl md:text-2xl tracking-tighter uppercase font-hype" style={{ fontFamily: '"Lexend Zetta", sans-serif' }}>
+                              CONNECT & SYNC!
+                            </span>
+                          </div>
+                        </div>
+                      </motion.button>
                   );
                 }
 

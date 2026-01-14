@@ -12,12 +12,17 @@ import { useState } from "react";
 
 const queryClient = new QueryClient();
 
-// ... existing imports ...
+import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
   
   return (
-    <WagmiProvider config={config}>
+    <>
+      <Head>
+        <title>CoinTown</title>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <SessionProvider session={pageProps.session}>
           <RainbowKitProvider
@@ -33,5 +38,6 @@ export default function App({ Component, pageProps }: AppProps) {
         </SessionProvider>
       </QueryClientProvider>
     </WagmiProvider>
+    </>
   );
 }

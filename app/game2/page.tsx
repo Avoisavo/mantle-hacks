@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as CANNON from 'cannon-es';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useAccount, useDisconnect } from 'wagmi';
 import { LogOut, Wallet, AlertCircle } from 'lucide-react';
 import { AvatarIcon } from '@/components/game/ui/AvatarIcon';
@@ -774,8 +774,10 @@ export default function Game2Page() {
 
         // GLTF Loader
         const loader = new GLTFLoader();
+        // FBX Loader
+        const fbxLoader = new FBXLoader();
         let loadedCount = 0;
-        const totalModels = 2;
+        const totalModels = 3;
 
         function checkLoaded() {
             loadedCount++;
@@ -951,55 +953,39 @@ export default function Game2Page() {
         let currentRotation = 0;
         let hasStarted = false;
 
-        loader.load(
-            '/game2/greenguy.glb',
-            (gltf) => {
-                character = gltf.scene;
-                character.position.set(firstTileX, 11, firstTileZ);
+        let characterMixer: THREE.AnimationMixer | null = null;
+
+        fbxLoader.load(
+            '/models/yellow-stand.fbx',
+            (fbx) => {
+                character = fbx;
+                character.position.set(firstTileX, 10.6, firstTileZ);
                 character.rotation.y = 0;
-                character.scale.set(0.4, 0.4, 0.4); // Made smaller (was 0.6)
+                character.scale.set(0.005, 0.005, 0.005);
                 character.traverse((child) => {
-                    if (child.isMesh) {
+                    if ((child as THREE.Mesh).isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
                 });
                 scene.add(character);
-                console.log('Character loaded successfully');
-                checkLoaded();
-            },
-            (progress) => {
-                console.log('Character loading:', (progress.loaded / progress.total * 100) + '%');
-            },
-            (error) => {
-                console.error('Error loading character:', error);
-                checkLoaded();
-            }
-        );
 
-        // Load yellow-stand.fbx character next to greenguy
-        const fbxLoader = new FBXLoader();
-        fbxLoader.load(
-            '/character/yellow-stand.fbx',
-            (fbx) => {
-                // Position it 2 units to the right of the main character
-                fbx.position.set(firstTileX + 2, 11, firstTileZ);
-                fbx.rotation.y = 0;
-                fbx.scale.set(0.01, 0.01, 0.01); // FBX models are usually larger, adjust scale as needed
-                fbx.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
-                scene.add(fbx);
-                console.log('Yellow character loaded successfully');
+                // Setup animation
+                characterMixer = new THREE.AnimationMixer(character);
+                if (fbx.animations.length > 0) {
+                    const action = characterMixer.clipAction(fbx.animations[0]);
+                    action.play();
+                }
+
+                console.log('FBX Character loaded successfully');
+                checkLoaded();
             },
             (progress) => {
-                console.log('Yellow character loading:', (progress.loaded / progress.total * 100) + '%');
+                console.log('FBX Character loading:', (progress.loaded / progress.total * 100) + '%');
             },
             (error) => {
-                console.error('Error loading yellow character:', error);
+                console.error('Error loading FBX character:', error);
+                checkLoaded();
             }
         );
 
@@ -1009,6 +995,10 @@ export default function Game2Page() {
 
             const time = Date.now() * 0.001;
             const deltaTime = 0.016; // Approximate 60fps
+
+            if (characterMixer) {
+                characterMixer.update(deltaTime);
+            }
 
             // Intro camera animation
             if (!introComplete) {
@@ -1077,7 +1067,7 @@ export default function Game2Page() {
                         easeInOut
                     );
 
-                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 11, 0);
+                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 10.6, 0);
                     controls.target.lerp(targetLookAt, easeInOut);
                 } else {
                     // Animation complete
@@ -1231,7 +1221,7 @@ export default function Game2Page() {
 
                 await new Promise<void>((resolve) => {
                     const startPos = character!.position.clone();
-                    const endPos = new THREE.Vector3(targetPos.x, 11, targetPos.z);
+                    const endPos = new THREE.Vector3(targetPos.x, 10.6, targetPos.z);
                     const startRot = character!.rotation.y;
                     const targetRot = needsRotation ? startRot + Math.PI / 2 : startRot;
                     const duration = 300;
@@ -1474,55 +1464,6 @@ export default function Game2Page() {
             <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
                 background: 'linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%)'
             }}>
-                {/* Account Display - Top Right */}
-                {isLoggedIn && introComplete && (
-                    <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
-                        {/* User Account Button */}
-                        <div className="relative" ref={accountMenuRef}>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowAccountMenu(!showAccountMenu);
-                                }}
-                                className="flex items-center gap-3 bg-black/40 backdrop-blur-xl border border-pink-500/40 rounded-full px-4 py-2 hover:border-pink-400/60 transition-all"
-                            >
-                                <div className="w-8 h-8 rounded-full border-2 border-pink-400 flex items-center justify-center bg-pink-500/10">
-                                    {displayImage ? (
-                                        <img
-                                            src={displayImage}
-                                            alt={displayName || "User"}
-                                            className="w-full h-full rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <AvatarIcon name="default" size={16} className="text-pink-400" />
-                                    )}
-                                </div>
-                                <span className="text-white font-medium text-sm">{displayName}</span>
-                            </button>
-
-                            {/* Account Dropdown Menu */}
-                            {showAccountMenu && (
-                                <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-xl border border-pink-500/40 rounded-2xl overflow-hidden">
-                                    <div className="p-3 border-b border-pink-500/20">
-                                        <p className="text-purple-300/60 text-xs">Signed in as</p>
-                                        <p className="text-white text-sm font-medium truncate">{displayName}</p>
-                                    </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleLogout();
-                                        }}
-                                        className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
-                                    >
-                                        <LogOut size={16} />
-                                        <span className="text-sm font-medium">Sign Out</span>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {/* Loading text */}
                 <div id="loading" className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
                     <h1

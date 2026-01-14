@@ -1,24 +1,11 @@
-/**
- * Helper functions for interacting with KYC Registry
- * 
- * The KYC contract now supports 3 verification methods:
- * 1. selfVerify() - NEW! Anyone can verify themselves
- * 2. verifyMe(deadline, signature) - Backend-signed verification
- * 3. setApproved(user, bool) - Admin-only approval
- */
-
-import { Contract, BrowserProvider } from 'ethers';
+import { ethers } from 'ethers';
 import { KYC_REGISTRY_ADDRESS } from './address';
 import { kyc as KYC_ABI } from './kyc';
 
-/**
- * Allow user to self-verify (NO ADMIN NEEDED!)
- * This is the easiest way - just call this function
- */
-export async function selfVerifyKYC(provider: BrowserProvider) {
+export async function selfVerifyKYC(provider: ethers.providers.Web3Provider) {
     try {
         const signer = await provider.getSigner();
-        const contract = new Contract(KYC_REGISTRY_ADDRESS, KYC_ABI, signer);
+        const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_ABI, signer);
 
         // Call the selfVerify function
         const tx = await contract.selfVerify();
@@ -55,9 +42,9 @@ export async function selfVerifyKYC(provider: BrowserProvider) {
 /**
  * Check if a user has passed KYC verification
  */
-export async function checkKYCStatus(address: string, provider: BrowserProvider) {
+export async function checkKYCStatus(address: string, provider: ethers.providers.Web3Provider) {
     try {
-        const contract = new Contract(KYC_REGISTRY_ADDRESS, KYC_ABI, provider);
+        const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_ABI, provider);
         const isVerified = await contract.hasPassed(address);
         return isVerified;
     } catch (error) {
@@ -65,23 +52,3 @@ export async function checkKYCStatus(address: string, provider: BrowserProvider)
         return false;
     }
 }
-
-/**
- * Example usage in a React component:
- * 
- * import { useProvider } from 'wagmi';
- * import { selfVerifyKYC, checkKYCStatus } from '@/utils/kyc-helper';
- * 
- * function MyComponent() {
- *   const provider = useProvider();
- *   
- *   const handleVerify = async () => {
- *     const result = await selfVerifyKYC(provider);
- *     if (result.success) {
- *       alert('KYC Verified!');
- *     }
- *   };
- *   
- *   return <button onClick={handleVerify}>Verify KYC</button>;
- * }
- */

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Scan, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Camera, UserSquare2, X } from 'lucide-react';
+import { ShieldCheck, Scan, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Camera, UserSquare2, X, Shield, Zap, Sparkles } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Contract, JsonRpcProvider } from 'ethers';
+import { ethers } from 'ethers';
 import { useSignMessage } from 'wagmi';
 import { KYC_REGISTRY_ADDRESS } from '@/utils/address';
 import { kyc as KYC_REGISTRY_ABI } from '@/utils/kyc';
@@ -27,8 +27,8 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   const checkStatus = useCallback(async () => {
     if (!userAddress || !KYC_REGISTRY_ADDRESS) return false;
     try {
-      const provider = new JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
-      const contract = new Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
+      const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+      const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
       const isVerified = await contract.hasPassed(userAddress);
       if (isVerified) {
         setStatus('success');
@@ -67,10 +67,10 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   }, [status, checkStatus]);
 
   const startCamera = async () => {
+    if (cameraStream?.active) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setCameraStream(stream);
-      if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (e) {
       setError("Camera access is required for identity verification.");
       setStatus('failed');
@@ -86,20 +86,23 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
 
   useEffect(() => { return () => stopCamera(); }, []);
 
-  const startVerificationFlow = () => {
-    if (!userAddress) {
-      setError("Wallet not connected");
-      setStatus('failed');
-      return;
+  useEffect(() => {
+    if (status === 'face_scan' || status === 'id_scan') {
+      if (!cameraStream?.active) {
+        startCamera();
+      }
     }
-    setError(null);
-    setStatus('face_prep');
-  };
+  }, [status, cameraStream]);
 
-  const initFaceScan = async () => {
-    await startCamera();
-    setStatus('face_scan');
-  };
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && cameraStream) {
+      video.srcObject = cameraStream;
+      video.onloadedmetadata = () => {
+        video.play().catch(console.error);
+      };
+    }
+  }, [cameraStream, status]);
 
   useEffect(() => {
     if (status === 'face_scan' && cameraStream) {
@@ -168,162 +171,150 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   };
 
   return (
-    <div className="py-8 text-center text-white">
-      <div className="relative w-full max-w-sm mx-auto mb-8">
-        {(status === 'face_scan' || status === 'id_scan' || status === 'face_prep' || status === 'id_prep') ? (
-          <div className={`relative mx-auto rounded-3xl overflow-hidden border-2 transition-all duration-500 bg-black shadow-[0_0_30px_rgba(16,185,129,0.2)] ${(status === 'face_scan' || status === 'id_scan')
-            ? (status.includes('id') ? 'w-full aspect-[1.586/1] scale-100' : 'w-full aspect-square scale-100')
-            : (status === 'id_prep' ? 'w-64 aspect-[1.586/1] scale-95 opacity-50' : 'w-48 aspect-square scale-95 opacity-50')
-            }`}>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className={`w-full h-full object-cover transition-transform duration-700 ${(status === 'face_scan' || status === 'face_prep') ? 'transform scale-x-[-1]' : ''
-                }`}
-            />
-            {(status === 'face_scan' || status === 'id_scan') && (
-              <div className="absolute inset-0 bg-[#10B981]/10 z-30">
-                <motion.div initial={{ top: "0%" }} animate={{ top: "100%" }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute left-0 right-0 h-[3px] bg-[#10B981] shadow-[0_0_20px_#10B981]" />
-                <div className="absolute inset-0 border-[20px] border-black/20 pointer-events-none" />
+    <div className="w-full flex flex-col items-center">
+      
+      {/* Dynamic Visual Content - Scaled Down */}
+      <div className="relative w-full mb-6 flex justify-center py-4">
+        <AnimatePresence mode="wait">
+          {(status === 'idle' || status === 'checking' || status === 'face_prep' || status === 'id_prep') && (
+            <motion.div 
+              key="artifact"
+              initial={{ scale: 0.8, rotateX: 45, opacity: 0 }}
+              animate={{ scale: 0.85, rotateX: 0, opacity: 1 }}
+              exit={{ scale: 1.1, opacity: 0 }}
+              className="relative flex items-center justify-center h-32 w-32"
+            >
+              {/* Neon Energy Ring */}
+              <div className="absolute inset-[-15%] rounded-full border-[3px] border-cyan-400/30 animate-pulse"></div>
+              
+              {/* Chrome 3D Shield */}
+              <div className="relative z-10 w-24 h-24 bg-gradient-to-tr from-zinc-400 via-white to-zinc-400 rounded-2xl border-4 border-black flex items-center justify-center shadow-[0_10px_20px_rgba(255,255,255,0.4)]">
+                 <Shield size={48} className="text-black" strokeWidth={3} />
+                 
+                 {/* Floating Cubes & Sparks */}
+                 <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} className="absolute -top-4 -right-4 text-yellow-400">
+                    <Sparkles size={16} />
+                 </motion.div>
               </div>
-            )}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${(status === 'face_scan' || status === 'id_scan') ? 'bg-red-500 animate-pulse' : 'bg-zinc-500'}`} />
-              <span className="text-[10px] uppercase tracking-widest font-bold">{status.replace('_', ' ')}</span>
-            </div>
-          </div>
-        ) : status === 'id_confirm' ? (
-          <div className="h-0" /> /* Shrink the icon area to make room for form */
-        ) : (
-          <div className="w-32 h-32 mx-auto flex items-center justify-center bg-black/50 rounded-full backdrop-blur-sm z-10 border border-white/10 relative">
-            <AnimatePresence mode="wait">
-              {(status === 'idle' || status === 'checking') && <ShieldCheck className="w-12 h-12 text-zinc-500" />}
-              {status === 'signing' && <Scan className="w-12 h-12 text-blue-500 animate-pulse" />}
-              {status === 'verifying' && <RefreshCw className="w-12 h-12 text-yellow-500 animate-spin" />}
-              {status === 'success' && <CheckCircle2 className="w-16 h-16 text-[#10B981]" />}
-              {status === 'failed' && <AlertCircle className="w-12 h-12 text-red-500" />}
-            </AnimatePresence>
-          </div>
-        )}
+            </motion.div>
+          )}
+
+          {(status === 'face_scan' || status === 'id_scan') && (
+            <motion.div 
+              key="scanner"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`relative mx-auto rounded-[30px] overflow-hidden border-4 border-white shadow-[0_0_40px_rgba(34,211,238,0.4)] ${status.includes('id') ? 'w-full aspect-[1.586/1]' : 'w-56 aspect-square'}`}
+            >
+              <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover ${status.includes('face') ? 'transform scale-x-[-1]' : ''}`} />
+              <div className="absolute inset-0 bg-cyan-400/10 pointer-events-none">
+                <motion.div 
+                  initial={{ top: "0%" }} 
+                  animate={{ top: "100%" }} 
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }} 
+                  className="absolute left-0 right-0 h-1 bg-cyan-400 shadow-[0_0_15px_#22d3ee] z-50" 
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className={`${status === 'id_confirm' ? 'h-auto' : 'h-40'} px-4 flex flex-col items-center justify-center`}>
+      {/* Action Controls - Compact */}
+      <div className="w-full space-y-6">
         <AnimatePresence mode="wait">
-          {(status === 'idle' || status === 'checking') && (
-            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-2xl font-bold mb-2">Identity Verification</h2>
-              <p className="text-zinc-500 text-sm mb-4">{status === 'checking' ? 'Checking status...' : isSmartAccount ? 'Verify your Google Account' : 'Secure identification protocol'}</p>
-            </motion.div>
-          )}
-
-          {status === 'face_prep' && (
-            <motion.div key="face_prep" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div>
-                <h2 className="text-xl font-bold mb-2">Biometric Scan Required</h2>
-                <p className="text-zinc-400 text-sm">Please ensure you are in a well-lit area and your face is clearly visible.</p>
+          {status === 'idle' && (
+            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+              <div className="text-center space-y-1">
+                <h2 className="text-white font-black text-3xl italic tracking-tighter uppercase leading-none font-action">SECURE STATUS</h2>
+                <p className="text-cyan-400 font-black text-sm uppercase tracking-widest italic animate-pulse">Initializing Protocol...</p>
               </div>
-              <button onClick={initFaceScan} className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-zinc-200 transition-colors flex items-center gap-2"><Camera size={18} /> Start Facial Scan</button>
-            </motion.div>
-          )}
-
-          {status === 'face_scan' && (
-            <motion.div key="face_scan" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-xl font-bold mb-2 text-[#10B981]">Scanning Face...</h2>
-              <p className="text-zinc-400 text-sm mb-4">Hold still. Do not close the window.</p>
-              <div className="w-64 h-1.5 bg-zinc-800 rounded-full mx-auto overflow-hidden">
-                <motion.div className="h-full bg-[#10B981] shadow-[0_0_10px_#10B981]" animate={{ width: `${scanProgress}%` }} />
-              </div>
-            </motion.div>
-          )}
-
-          {status === 'id_prep' && (
-            <motion.div key="id_prep" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-              <div>
-                <h2 className="text-xl font-bold mb-2 text-blue-400">Scan Identity Document</h2>
-                <p className="text-zinc-400 text-sm">Please hold your ID card up to the camera.</p>
-              </div>
-              <button onClick={() => setStatus('id_scan')} className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-500 transition-colors flex items-center gap-2"><UserSquare2 size={18} /> Start ID Scan</button>
-            </motion.div>
-          )}
-
-          {status === 'id_scan' && (
-            <motion.div key="id_scan" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-xl font-bold mb-2 text-blue-400">Verifying Document...</h2>
-              <p className="text-zinc-400 text-sm mb-4">Align your ID card with the scanning guide.</p>
-              <div className="w-64 h-1.5 bg-zinc-800 rounded-full mx-auto overflow-hidden">
-                <motion.div className="h-full bg-blue-500 shadow-[0_0_10px_#3b82f6]" animate={{ width: `${scanProgress}%` }} />
-              </div>
-            </motion.div>
-          )}
-
-          {status === 'id_confirm' && (
-            <motion.div key="id_confirm" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-blue-400 font-space italic">Confirm extracted info</h2>
-                <p className="text-zinc-500 text-sm mt-1">Please verify that the OCR correctly read your document.</p>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 text-left">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Full Name</label>
-                  <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5">Alice Smith</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Identity Number</label>
-                  <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5 font-mono">MNT-742-998</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Residential Address</label>
-                  <p className="text-white font-medium bg-white/5 p-3 rounded-xl border border-white/5 text-sm leading-relaxed">123 Mantle Way, Sepolia District</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleVerify}
-                className="w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all transform active:scale-[0.98]"
+              <button 
+                onClick={() => setStatus('face_prep')}
+                className="group relative w-full py-6 bg-[#4ADE80] rounded-[30px] border-[5px] border-white shadow-[0_10px_0_#166534] active:translate-y-[6px] active:shadow-[0_4px_0_#166534] transition-all overflow-hidden"
               >
-                Verify & Sign Protocol
+                 <span className="relative z-10 text-3xl font-black italic text-black font-action uppercase tracking-tight">START SCAN!</span>
               </button>
             </motion.div>
           )}
 
-          {status === 'signing' && <motion.div key="signing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}><h2 className="text-xl font-bold mb-2 text-blue-400">Sign Request</h2><p className="text-zinc-400 text-sm">Please sign the message in your wallet to prove ownership.</p></motion.div>}
-          {status === 'verifying' && <motion.div key="verifying" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}><h2 className="text-xl font-bold mb-2 text-yellow-500">Verifying On-Chain...</h2><p className="text-zinc-400 text-sm mb-2">Waiting for Mantle network confirmation.</p></motion.div>}
-          {status === 'success' && (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-              <h2 className="text-2xl font-bold mb-2 text-[#10B981]">Verification Complete</h2>
-              <p className="text-zinc-500 text-sm mb-3">Your identity has been secured on Mantle.</p>
-              {txHash && (
-                <a href={`https://sepolia.mantlescan.xyz/tx/${txHash}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs text-[#10B981] hover:underline bg-[#10B981]/10 px-4 py-2 rounded-full border border-[#10B981]/30">
-                  <ExternalLink size={12} />
-                  <span>View Transaction: {txHash.slice(0, 6)}...{txHash.slice(-4)}</span>
-                </a>
-              )}
+          {status === 'face_prep' && (
+            <motion.div key="face_prep" className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-white font-black text-3xl italic tracking-tighter uppercase mb-1">BIOMETRIC GRID</h2>
+                <p className="text-zinc-400 font-bold text-[10px] tracking-widest">CENTER FACE IN FIELD</p>
+              </div>
+              <button onClick={() => setStatus('face_scan')} className="w-full py-6 bg-cyan-400 rounded-[30px] border-[5px] border-white shadow-[0_10px_0_#0891b2] active:translate-y-[6px] active:shadow-[0_4px_0_#0891b2] text-2xl font-black italic text-black font-action flex items-center justify-center gap-3">
+                 <Camera size={28} strokeWidth={3} /> CAPTURE!
+              </button>
             </motion.div>
           )}
-          {status === 'failed' && <motion.div key="failed"><h2 className="text-xl font-bold mb-2 text-red-500">Verification Failed</h2><p className="text-red-400 text-sm mb-4">{error}</p></motion.div>}
+
+          {status === 'id_prep' && (
+            <motion.div key="id_prep" className="space-y-6">
+               <div className="text-center">
+                <h2 className="text-white font-black text-3xl italic tracking-tighter uppercase mb-1">DOCUMENT SYNC</h2>
+                <p className="text-zinc-400 font-bold text-[10px] tracking-widest">SHOW LEGENDARY ID</p>
+              </div>
+              <button onClick={() => setStatus('id_scan')} className="w-full py-6 bg-purple-500 rounded-[30px] border-[5px] border-white shadow-[0_10px_0_#6b21a8] active:translate-y-[6px] active:shadow-[0_4px_0_#6b21a8] text-2xl font-black italic text-white font-action flex items-center justify-center gap-3 uppercase">
+                 <UserSquare2 size={28} strokeWidth={3} /> LINK ID!
+              </button>
+            </motion.div>
+          )}
+
+          {status === 'id_confirm' && (
+            <motion.div key="id_confirm" className="w-full space-y-4">
+              <div className="text-center">
+                 <h2 className="text-white font-black text-3xl italic tracking-tighter uppercase font-action">DATA VALID!</h2>
+                 <p className="text-cyan-400 font-black italic tracking-widest uppercase text-[10px] mt-1">Integrity Check Successful</p>
+              </div>
+              
+              <div className="bg-white/5 border-[3px] border-white/10 rounded-[30px] p-6 space-y-4 text-left relative overflow-hidden group">
+                <div className="space-y-1">
+                   <label className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.1em]">Subject Name</label>
+                   <p className="text-white font-black text-xl italic tracking-tight font-chunky">ALICE SMITH</p>
+                </div>
+                <div className="space-y-1">
+                   <label className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.1em]">Registry Code</label>
+                   <p className="text-[#ff00ff] font-black text-xl font-mono">MNT-742-998</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleVerify}
+                className="w-full py-6 bg-[#4ADE80] rounded-[40px] border-[5px] border-white shadow-[0_12px_0_#166534] active:translate-y-[8px] active:shadow-[0_4px_0_#166534] transition-all flex flex-col items-center justify-center group relative overflow-hidden"
+              >
+                 <span className="relative z-10 text-3xl font-black italic text-black font-action uppercase">VERIFY IDENTITY!</span>
+              </button>
+            </motion.div>
+          )}
+
+          {status === 'verifying' && (
+            <motion.div key="verifying" className="flex flex-col items-center gap-8 py-10">
+               <div className="relative">
+                  <RefreshCw className="w-24 h-24 text-cyan-400 animate-spin" strokeWidth={3} />
+                  <div className="absolute inset-0 blur-xl bg-cyan-400 opacity-20 animate-pulse"></div>
+               </div>
+               <div className="text-center">
+                  <h2 className="text-white font-black text-4xl italic tracking-tighter uppercase mb-2">UPLOADING...</h2>
+                  <p className="text-cyan-400 font-black text-sm tracking-widest animate-pulse">BROADCASTING TO MANTLE SEPOLIA</p>
+               </div>
+            </motion.div>
+          )}
+          
+          {status === 'failed' && (
+            <motion.div key="failed" className="text-center space-y-6">
+               <AlertCircle size={80} className="text-red-500 mx-auto" strokeWidth={3} />
+               <div className="space-y-2">
+                 <h2 className="text-white font-black text-4xl italic tracking-tighter uppercase">PROTOCOL ERROR</h2>
+                 <p className="text-red-400 font-bold tracking-tight">{error}</p>
+               </div>
+               <button onClick={() => setStatus('idle')} className="w-full py-5 bg-white text-black rounded-[30px] border-4 border-black font-black uppercase italic text-xl shadow-[0_8px_0_#666]">REBOOT SYSTEM!</button>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
-      {status === 'idle' && (
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={startVerificationFlow} className="mt-6 w-full py-4 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#10B981]/90 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-          Verify Identity
-        </motion.button>
-      )}
-
-      {status === 'failed' && (
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setStatus('idle')} className="mt-6 w-full py-4 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700 transition-all flex items-center justify-center gap-2">
-          Try Again
-        </motion.button>
-      )}
-
-      {status === 'verifying' && (
-        <button onClick={() => checkStatus()} className="mt-4 text-xs text-zinc-500 hover:text-white underline">
-          Is it taking too long? Refresh Status
-        </button>
-      )}
     </div>
   );
 }

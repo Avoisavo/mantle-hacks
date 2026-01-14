@@ -20,8 +20,9 @@ async function main() {
     if (!deployerKey) throw new Error("DEPLOYER_PRIVATE_KEY not set in .env.local");
     if (!relayKey) throw new Error("RELAY_PRIVATE_KEY not set in .env.local");
 
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
-
+    const provider = new ethers.providers.JsonRpcProvider(RPC);
+    const network = await provider.getNetwork();
+    
     // Use relay wallet as deployer so it becomes the owner
     // This ensures the relay can call setApproved() which has onlyOwner modifier
     const relayWallet = new ethers.Wallet(relayKey, provider);
@@ -31,9 +32,9 @@ async function main() {
     console.log(`This wallet will be the contract owner and signer.\n`);
 
     const balance = await provider.getBalance(relayWallet.address);
-    console.log(`Balance: ${ethers.formatEther(balance)} MNT\n`);
+    console.log(`Balance: ${ethers.utils.formatEther(balance)} MNT\n`);
 
-    if (balance === 0n) {
+    if (balance.isZero()) {
         throw new Error("Relay wallet has no MNT on Mantle Sepolia. Get some from the faucet first.");
     }
 
@@ -46,9 +47,9 @@ async function main() {
 
     // Deploy with relay wallet address as the signer
     const contract = await factory.deploy(relayWallet.address);
-    await contract.waitForDeployment();
+    await contract.deployed();
 
-    const contractAddress = await contract.getAddress();
+    const contractAddress = contract.address;
     console.log(`✅ Contract deployed to: ${contractAddress}\n`);
 
     // ========== Summary ==========
