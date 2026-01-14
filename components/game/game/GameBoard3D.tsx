@@ -21,7 +21,7 @@ const SmoothPlayerToken: React.FC<{
   modelUrl?: string;
   targetPosition: [number, number, number];
   currentPosition: number;
-}> = ({ playerIndex, color, modelUrl = '/game/ChickenGuy.glb', targetPosition, currentPosition }) => {
+}> = ({ playerIndex, color, modelUrl = '/models/ChickenGuy.glb', targetPosition, currentPosition }) => {
   const groupRef = useRef<THREE.Group>(null);
   const modelRef = useRef<THREE.Group>(null);
   const [targetRotation, setTargetRotation] = useState(0);
@@ -276,4 +276,4 @@ export const GameBoard3D: React.FC<GameBoard3DProps> = ({ players, assets, curre
   );
 };
 
-useGLTF.preload('/game/ChickenGuy.glb');
+useGLTF.preload('/models/ChickenGuy.glb');
