@@ -62,5 +62,8 @@
     "@mantleio/sdk": {
       "ethers": "5.7.2"
     }
+  },
+  "overrides": {
+    "zod": "^3.25.76"
   }
 }
