@@ -8,12 +8,17 @@ import ProofGenerator from '../components/identity/ProofGenerator';
 import SuccessState from '../components/identity/SuccessState';
 import ConnectButton from '../components/ConnectButton';
 import Head from 'next/head';
+import { useMntBalance } from '@/hooks/useMntBalance';
 
 export default function IdentityPage() {
   const [step, setStep] = useState(1);
   const { address, isConnected } = useAccount();
   const { data: session } = useSession();
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
+
+  // -- BALANCES --
+  const { balance: l1MntBalance } = useMntBalance({ address: address, chainId: 11155111 });
+  const { balance: l2MntBalance } = useMntBalance({ address: address, chainId: 5003 });
 
   useEffect(() => {
     const fetchSmartAccount = async () => {
@@ -145,7 +150,7 @@ export default function IdentityPage() {
       <div className="relative z-10 container mx-auto pt-8 pb-12 px-6 max-w-2xl min-h-[100vh] flex flex-col items-center justify-center">
         
         {/* Hype Header - Aggressively Scaled Down */}
-        <header className="mb-6 text-center">
+        <header className="mb-6 text-center space-y-4">
            <motion.div
              initial={{ scale: 0.8, rotate: -5, opacity: 0 }}
              animate={{ scale: 1, rotate: -3, opacity: 1 }}
@@ -161,11 +166,26 @@ export default function IdentityPage() {
              initial={{ y: 20, opacity: 0 }}
              animate={{ y: 0, opacity: 1 }}
              transition={{ delay: 0.2 }}
-             className="inline-block bg-purple-900/40 backdrop-blur-xl px-6 py-2 rounded-full border border-white/20"
+             className="flex flex-col items-center gap-3"
            >
-              <p className="text-white font-black text-xs md:text-sm tracking-tight uppercase italic whitespace-nowrap">
-                Secure your status on the Mantle Network.
-              </p>
+              <div className="inline-block bg-purple-900/40 backdrop-blur-xl px-6 py-2 rounded-full border border-white/20">
+                <p className="text-white font-black text-xs md:text-sm tracking-tight uppercase italic whitespace-nowrap">
+                  Secure your status on the Mantle Network.
+                </p>
+              </div>
+
+              {address && (
+                <div className="flex gap-4">
+                  <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center">
+                    <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">L1 Sepolia</span>
+                    <span className="text-sm font-black text-pink-500 italic">{l1MntBalance} MNT</span>
+                  </div>
+                  <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex flex-col items-center">
+                    <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">L2 Mantle</span>
+                    <span className="text-sm font-black text-cyan-400 italic">{l2MntBalance} MNT</span>
+                  </div>
+                </div>
+              )}
            </motion.div>
         </header>
 

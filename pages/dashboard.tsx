@@ -1,14 +1,15 @@
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useAccount, useDisconnect, useReadContract, useWriteContract, useSwitchChain, useBalance } from "wagmi";
-import { useEffect, useState, useRef } from "react";
+import { useAccount, useDisconnect, useWriteContract, useSwitchChain } from "wagmi";
+import { useEffect, useState } from "react";
 import Logo from "@/components/Logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/router";
-import { TOWN_TOPUP_NATIVE_ADDRESS, TOWN_TOKEN_NATIVE_ADDRESS } from "@/utils/address";
-import { ABI as TownTokenABI } from "@/utils/towntoken";
+import { TOWN_TOPUP_NATIVE_ADDRESS } from "@/utils/address";
 import { ABI as TownTopUpNativeABI } from "@/utils/towntopnative";
-import { formatEther, parseEther } from "viem";
+import { parseEther } from "viem";
 import Head from "next/head";
+import { useTownBalance } from "@/hooks/useTownBalance";
+import { useMntBalance } from "@/hooks/useMntBalance";
 import { 
   ShieldCheck, 
   UserCheck, 
@@ -17,14 +18,11 @@ import {
   Copy, 
   LogOut, 
   Wallet as WalletIcon, 
-  ChevronRight, 
-  ExternalLink,
   CheckCircle2,
   X,
   Globe,
   Zap,
   Star,
-  Coins,
   ArrowRight
 } from "lucide-react";
 
@@ -52,27 +50,24 @@ export default function Dashboard() {
   const CHAIN_ID = 5003;
 
   // -- EOA BALANCES --
-  const { data: eoaMntBalance } = useBalance({
-    address: connectedWallet,
-    chainId: CHAIN_ID,
+  // MNT Balance (Native on Mantle)
+  const { balance: eoaMntBalance } = useMntBalance({ 
+    address: connectedWallet, 
+    chainId: CHAIN_ID 
   });
 
-  const { data: eoaTownBalance } = useReadContract({
-    address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
-    abi: TownTokenABI,
-    functionName: "balanceOf",
-    args: connectedWallet ? [connectedWallet] : undefined,
-    chainId: CHAIN_ID,
-  });
+  // TOWN Balance (on Mantle)
+  const { balance: eoaTownBalance } = useTownBalance(connectedWallet);
 
   // -- SMART ACCOUNT BALANCES --
-  const { data: saTownBalance } = useReadContract({
-    address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
-    abi: TownTokenABI,
-    functionName: "balanceOf",
-    args: accountData?.accountAddress ? [accountData.accountAddress as `0x${string}`] : undefined,
-    chainId: CHAIN_ID,
-  });
+  // TOWN Balance (on Smart Account)
+  const { balance: saTownBalance } = useTownBalance(accountData?.accountAddress);
+
+  // Note: Smart Account MNT Balance is fetched via API in fetchAccountData currently.
+  // We can keep it or use the hook if we wanted real-time updates without API calls, 
+  // but API handles the abstraction. Let's keep the API one for SA MNT for now as per existing logic, 
+  // unless that's what's broken. User said "grabbing my wallet address token balance ... and TOWN". 
+  // The API fetch puts balance into accountData.balance.
 
   const handleMintTown = async () => {
     if (!connectedWallet) return;
@@ -420,8 +415,8 @@ export default function Dashboard() {
                      <div className="space-y-8">
                         <div className="space-y-4">
                            <div className="flex justify-between items-end">
-                              <p className="text-white font-black text-2xl italic tracking-tighter">MNT RESERVE</p>
-                              <p className="text-[#bffff4] text-5xl font-black italic leading-none">{accountData?.balance || "0.00"}</p>
+                              <p className="text-white font-black text-2xl italic tracking-tighter uppercase">Wallet MNT</p>
+                              <p className="text-[#bffff4] text-5xl font-black italic leading-none">{eoaMntBalance || "0.00"}</p>
                            </div>
                            <div className="h-8 bg-white/5 rounded-full border-4 border-white/10 overflow-hidden">
                               <motion.div 
@@ -434,8 +429,8 @@ export default function Dashboard() {
 
                         <div className="space-y-4">
                            <div className="flex justify-between items-end">
-                              <p className="text-white font-black text-2xl italic tracking-tighter">TOWN TOKEN</p>
-                              <p className="text-[#ff00ff] text-5xl font-black italic leading-none">{saTownBalance ? parseFloat(formatEther(saTownBalance as bigint)).toFixed(2) : "0.00"}</p>
+                              <p className="text-white font-black text-2xl italic tracking-tighter uppercase">Wallet TOWN</p>
+                              <p className="text-[#ff00ff] text-5xl font-black italic leading-none">{eoaTownBalance || "0.00"}</p>
                            </div>
                            <div className="h-8 bg-white/5 rounded-full border-4 border-white/10 overflow-hidden">
                               <motion.div 
@@ -468,7 +463,7 @@ export default function Dashboard() {
                      </div>
 
                      <div className="pt-12 border-t-4 border-white/5">
-                        <p className="text-white/30 font-black text-center text-sm tracking-[0.2em] uppercase">Authorized Access Only / Node #772</p>
+                        <p className="text-white/30 font-black text-center text-sm tracking-[0.2em] uppercase italic">Authorized Access Only / Mantle Sepolia</p>
                      </div>
                   </div>
                </motion.div>
