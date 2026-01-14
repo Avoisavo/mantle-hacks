@@ -22,7 +22,7 @@ import { AvatarIcon } from '@/components/game/ui/AvatarIcon';
 import { INITIAL_ASSETS, AVATAR_OPTIONS } from '@/lib/game/constants';
 import { Player, Asset, GameLog, GameState } from '@/lib/game/types';
 
-const PLAYER_MODEL = '/game/ChickenGuy.glb';
+const PLAYER_MODEL = '/models/ChickenGuy.glb';
 const COLOR_OPTIONS = ['#26D07C', '#3498DB', '#E74C3C', '#F1C40F', '#8E44AD', '#E67E22', '#1ABC9C', '#1E293B'];
 
 export default function GamePage() {

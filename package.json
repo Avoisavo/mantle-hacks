@@ -13,6 +13,7 @@
     "@alchemy/aa-accounts": "^3.19.0",
     "@alchemy/aa-alchemy": "^3.19.0",
     "@alchemy/aa-core": "^3.19.0",
+    "@mantleio/sdk": "^1.0.5",
     "@openzeppelin/contracts": "^5.4.0",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@react-three/drei": "^10.7.7",
@@ -23,7 +24,8 @@
     "@types/three": "^0.155.0",
     "cannon-es": "^0.20.0",
     "clsx": "^2.1.1",
-    "ethers": "^6.16.0",
+    "ethers": "^5.7.2",
+    "ethers-v5": "npm:ethers@^5.8.0",
     "framer-motion": "^12.24.10",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
@@ -55,5 +57,10 @@
     "tailwindcss": "^4",
     "typechain": "^8.3.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@mantleio/sdk": {
+      "ethers": "5.7.2"
+    }
   }
 }

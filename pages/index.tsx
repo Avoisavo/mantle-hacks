@@ -16,7 +16,7 @@ const GoogleLoginButton = dynamic(() => import("@/components/GoogleLoginButton")
 
 // 3D Model Component
 function ChickenGuy({ isHit }: { isHit: boolean }) {
-  const { scene } = useGLTF("/game/ChickenGuy.glb");
+  const { scene } = useGLTF("/models/ChickenGuy.glb");
   const meshRef = useRef<THREE.Group>(null);
   const originalMaterials = useRef<Map<THREE.MeshStandardMaterial, { color: number; emissive: number; emissiveIntensity: number; transparent: boolean; opacity: number }>>(new Map());
 

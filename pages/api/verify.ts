@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         if (!skipSigCheck) {
-            const recoveredAddress = ethers.verifyMessage(expectedMessage, signature);
+            const recoveredAddress = ethers.utils.verifyMessage(expectedMessage, signature);
             if (recoveredAddress.toLowerCase() !== userAddress.toLowerCase()) {
                 return res.status(401).json({ error: 'Invalid signature' });
             }
@@ -79,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'Contract address mismatch' });
         }
 
-        const provider = new ethers.JsonRpcProvider(RPC_URL);
+        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
         const wallet = new ethers.Wallet(SIGNER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, wallet);
 

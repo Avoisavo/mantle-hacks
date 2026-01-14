@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Scan, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Camera, UserSquare2, X } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Contract, JsonRpcProvider } from 'ethers';
+import { ethers } from 'ethers';
 import { useSignMessage } from 'wagmi';
 
 interface ProofGeneratorProps {
@@ -28,8 +28,8 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   const checkStatus = useCallback(async () => {
     if (!userAddress || !KYC_REGISTRY_ADDRESS) return false;
     try {
-      const provider = new JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
-      const contract = new Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
+      const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+      const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
       const isVerified = await contract.hasPassed(userAddress);
       if (isVerified) {
         setStatus('success');

@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useAccount, useDisconnect } from 'wagmi';
 import { LogOut, Wallet, AlertCircle } from 'lucide-react';
 import { AvatarIcon } from '@/components/game/ui/AvatarIcon';

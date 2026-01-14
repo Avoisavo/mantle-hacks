@@ -182,11 +182,11 @@ export default function Dashboard() {
           if (!targetAddress) return;
           
           try {
-             const { JsonRpcProvider, Contract } = await import('ethers');
-             const provider = new JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+             const ethers = await import('ethers');
+             const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
              const abi = ["function hasPassed(address user) external view returns (bool)"];
              // NOTE: Use environment variable in real app
-             const contract = new Contract(process.env.NEXT_PUBLIC_KYC_ADDRESS || "", abi, provider);
+             const contract = new ethers.Contract(process.env.NEXT_PUBLIC_KYC_ADDRESS || "", abi, provider);
              const passed = await contract.hasPassed(targetAddress);
              setIsVerified(passed);
           } catch (e) {
@@ -360,6 +360,13 @@ export default function Dashboard() {
             transition={{ delay: 0.4 }}
             className="flex flex-wrap gap-4"
           >
+            <button 
+              onClick={() => router.push('/bridge')}
+              className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-600 rounded-full text-white font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+              Bridge MNT
+            </button>
             <button className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full text-white font-semibold hover:opacity-90 transition-opacity">
               Fund Account
             </button>
