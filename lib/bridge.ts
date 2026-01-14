@@ -1,5 +1,5 @@
 import { CrossChainMessenger } from "@mantleio/sdk";
-import { L1_CHAIN_ID, L2_CHAIN_ID } from "./constants";
+import { L1_CHAIN_ID, L2_CHAIN_ID } from "@/utils/address";
 import { ethers } from "ethers";
 
 export function publicClientToProvider(publicClient: any) {

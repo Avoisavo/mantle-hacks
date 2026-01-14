@@ -15,7 +15,7 @@ import {
   L2_CHAIN_ID, 
   L1_MNT_TOKEN_ADDRESS, 
   L2_MNT_TOKEN_ADDRESS 
-} from '../lib/constants';
+} from '@/utils/address';
 import { 
   publicClientToProvider, 
   walletClientToSigner, 

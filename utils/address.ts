@@ -11,6 +11,12 @@ export const MNT_TOKEN_ADDRESS = "0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17";
 export const TOWN_TOPUP_NATIVE_ADDRESS = "0x2e99559aE2d30dF514559C883Cfb9997f82a39bf";
 export const TOWN_TOKEN_NATIVE_ADDRESS = "0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49";
 
+// for Bridging
+export const L1_CHAIN_ID = 11155111;
+export const L2_CHAIN_ID = 5003;
+
+export const L1_MNT_TOKEN_ADDRESS = "0x65e37b558f64e2be5768db46df22f93d85741a9e";
+export const L2_MNT_TOKEN_ADDRESS = "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000";
 
 //==not use anymore
 // TownTopUp System on Mantle Sepolia
