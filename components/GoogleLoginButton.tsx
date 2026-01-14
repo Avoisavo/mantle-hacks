@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export default function GoogleLoginButton() {
   const handleGoogleLogin = async () => {
     try {
-      await signIn("google", { callbackUrl: "/" });
+      await signIn("google", { callbackUrl: "/dashboard" });
     } catch (error) {
       console.error("Google login failed:", error);
     }

@@ -61,6 +61,9 @@ export default function ConnectButton() {
                   return (
                     <motion.button
                       onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('wallet_connecting', 'true');
+                        }
                         if (isMobile()) {
                           openConnectModal();
                         } else {

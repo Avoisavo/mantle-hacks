@@ -36,10 +36,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (status === "unauthenticated" && !connectedWallet) {
       signIn();
     }
-  }, [status]);
+  }, [status, connectedWallet]);
 
   useEffect(() => {
     // Fetch smart account info

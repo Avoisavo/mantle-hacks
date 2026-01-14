@@ -105,7 +105,8 @@ function Model({ chickenHit }: { chickenHit: boolean }) {
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const { address: connectedWallet, disconnect } = useAccount();
+  const { address: connectedWallet } = useAccount();
+  const { disconnect } = useDisconnect();
   const router = useRouter();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -124,10 +125,22 @@ export default function Home() {
   useEffect(() => {
     if (status === "authenticated" || connectedWallet) {
       setShowMainMenu(true);
+      
+      const isWalletConnecting = typeof window !== 'undefined' ? localStorage.getItem('wallet_connecting') === 'true' : false;
+
+      if (showLoginModal || isWalletConnecting) {
+        setShowLoginModal(false);
+        setShowModalDelayed(false);
+        setChickenHit(false);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('wallet_connecting');
+        }
+        router.push("/dashboard");
+      }
     } else {
       setShowMainMenu(false);
     }
-  }, [status, connectedWallet]);
+  }, [status, connectedWallet, showLoginModal, router]);
 
   // Fetch smart account if logged in via Google
   useEffect(() => {
@@ -278,7 +291,7 @@ export default function Home() {
         <meta name="description" content="Play the ultimate 3D monopoly game with Web3 integration" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Chelsea+Market&family=Luckiest+Guy&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+Old+Uyghur&display=swap" rel="stylesheet" />
       </Head>
 
@@ -677,6 +690,9 @@ export default function Home() {
                     setShowLoginModal(false);
                     setShowModalDelayed(false);
                     setChickenHit(false);
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('wallet_connecting');
+                    }
                   }}
                   className="mt-6 w-full text-purple-300/60 text-sm hover:text-purple-300 transition-colors"
                   style={{ fontFamily: '"Chelsea Market", cursive' }}
