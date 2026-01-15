@@ -6,6 +6,9 @@ import { useSignMessage } from 'wagmi';
 import { KYC_REGISTRY_ADDRESS } from '@/utils/address';
 import { kyc as KYC_REGISTRY_ABI } from '@/utils/kyc';
 
+// Type assertion for ethers v6
+const JsonRpcProviderClass = (ethers as any).JsonRpcProvider;
+
 interface ProofGeneratorProps {
   onComplete: (hash?: string) => void;
   userAddress: string;
@@ -27,7 +30,7 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   const checkStatus = useCallback(async () => {
     if (!userAddress || !KYC_REGISTRY_ADDRESS) return false;
     try {
-      const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+      const provider = new JsonRpcProviderClass("https://rpc.sepolia.mantle.xyz");
       const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
       const isVerified = await contract.hasPassed(userAddress);
       if (isVerified) {

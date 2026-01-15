@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
+import { ethers, JsonRpcProvider, Contract, formatEther, formatUnits } from 'ethers';
 import { MNT_TOKEN_ADDRESS, L1_MNT_TOKEN_ADDRESS } from '@/utils/address';
 
 // ERC20 ABI for Balance
@@ -48,19 +48,19 @@ export function useMntBalance({ address, chainId }: UseMntBalanceProps) {
                     return;
                 }
 
-                const provider = new ethers.providers.JsonRpcProvider(providerUrl);
+                const provider = new JsonRpcProvider(providerUrl);
 
                 if (isNative) {
                     const rawBalance = await provider.getBalance(address);
-                    const formatted = ethers.utils.formatEther(rawBalance);
+                    const formatted = formatEther(rawBalance);
                     setBalance(parseFloat(formatted).toFixed(2));
                 } else {
-                    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+                    const contract = new Contract(tokenAddress, ERC20_ABI, provider);
                     const [rawBalance, decimals] = await Promise.all([
                         contract.balanceOf(address),
                         contract.decimals()
                     ]);
-                    const formatted = ethers.utils.formatUnits(rawBalance, decimals);
+                    const formatted = formatUnits(rawBalance, decimals);
                     setBalance(parseFloat(formatted).toFixed(2));
                 }
 
