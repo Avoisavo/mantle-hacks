@@ -166,6 +166,32 @@ curl https://rpc.sepolia.mantle.xyz \
 - **Artifact not found:** Run `npx hardhat compile`
 - **Nonce errors:** Wait for pending transactions to confirm
 
+# Contract Addresses
+
+## Smart Account Contracts
+- **SimpleAccountFactory**: `0x7c4d0215d5DffDab6c439075B48a1636754c8b26`
+
+## Identity & KYC
+- **KYC Registry**: `0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86`
+
+## Token Contracts
+- **TOWN Token**: `0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49`
+- **TownTopUpNative**: `0x2e99559aE2d30dF514559C883Cfb9997f82a39bf`
+- **TownDeductNative**: `0x9acb9dD1573c2889906e0B3DF66ee24Cd4a2168C`
+
+## NFT Contracts
+- **MyNFT**: `0x3B73Aa8c41e814424EE9f557D25282e1c7FCa23F`
+
+## Token Addresses
+- **MNT Token (Mantle Sepolia)**: `0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17`
+- **MNT Token (L1 Sepolia)**: `0x65e37b558f64e2be5768db46df22f93d85741a9e`
+- **Native MNT (L2)**: `0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000`
+
+## Chain IDs
+- **Ethereum Sepolia (L1)**: `11155111`
+- **Mantle Sepolia (L2)**: `5003`
+
+
 
 
 
