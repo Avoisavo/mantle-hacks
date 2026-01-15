@@ -8,14 +8,28 @@ Mantle is used because it supports low-cost, fast transactions which are essenti
 
 Overall, the project explores how gamification can act as a practical entry point into RealFi, making real-world asset concepts more approachable and engaging.
 
-## Problem Statement
+## 🎯 Problem Statement
 
-RWA and NFTs become static after tokenization. Capital is locked, user attention fades. Asset utility is largely limited to trading or lending.
+1. **RWA and NFTs become static after tokenization** — Once assets are tokenized, they often sit idle in wallets
+2. **Capital is locked, user attention fades** — Without active engagement, users lose interest in their holdings
+3. **Asset utility is largely limited to trading or lending** — Traditional DeFi only offers passive holding or basic financial operations
 
-## Solution
+---
 
-Monopoly-style GameFi platform real-world assets into playable NFTs where ownership NFTs are used, upgraded and generate rent through player interactions.
+## ✨ Solution
 
+**Monopoly-style GameFi platform that transforms real-world assets into playable NFTs where ownership NFTs are used, upgraded, and generate rent through player interactions.**
+
+### Key Features
+
+1. **Interactive Asset Activation**  
+   CoinTown transforms tokenized assets into interactive NFTs inside a Monopoly-style game world. Instead of remaining idle after issuance, each asset becomes an active, playable component of a living on-chain economy.
+
+2. **Active Ownership Over Passive Holding**  
+   Ownership NFTs evolve beyond static collectibles by being actively used in gameplay, embedded into core mechanics, and designed for repeated interaction. This turns ownership into participation rather than mere storage.
+
+3. **Rent Generation & Shared Economy**  
+   When other players land on owned assets, NFTs generate rent and rewards. This enables continuous yield from ownership through gameplay interactions.
 ### Architectural Flow
 
 The CoinTown application follows a three-tier architecture pattern, flowing from the user interface layer down through the API layer to the blockchain layer.
