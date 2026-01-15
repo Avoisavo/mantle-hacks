@@ -1920,6 +1920,14 @@ export default function Game2Page() {
                     else if (nextPosition > 16 && nextPosition < 24) targetRot = Math.PI; // Right column - facing forward (down)
                     else if (nextPosition > 24) targetRot = -Math.PI / 2; // Top row - facing forward (left)
 
+                    // Ensure shortest path rotation (avoid spinning 270 degrees)
+                    let deltaRot = targetRot - startRot;
+                    // Normalize delta to [-PI, PI]
+                    while (deltaRot > Math.PI) deltaRot -= 2 * Math.PI;
+                    while (deltaRot < -Math.PI) deltaRot += 2 * Math.PI;
+                    // Adjust targetRot to be the closest equivalent angle
+                    targetRot = startRot + deltaRot;
+
                     // Player-specific movement speeds: Player 1 (Yellow) moves faster
                     const duration = currentPlayerIndex === 1 ? 600 : 800; // Player 1 moves faster (600ms vs 800ms)
                     const startTime = Date.now();
