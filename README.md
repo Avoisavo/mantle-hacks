@@ -7,14 +7,9 @@ Overall, the project explores how gamification can act as a practical entry poin
 
 
  ## Problem Statement
-  1. Loss of Purpose After Tokenization: Many Real-World Assets (RWAs) and NFTs are treated as the end product rather than the starting point.
-     Once tokenized and issued on-chain, assets often stop evolving.
-     
-  2. Assets Become Static: After minting, most RWAs and NFTs remain unchanged, offering no interaction, progression or dynamic behavior. As a result, assets that sit passively in wallets or           marketplaces without reflecting real-world activity or ongoing value creation.
-
-  3. Utility Limited to Trading or Lending: In most cases, RWAs and NFTs are only useful for buying and selling , speculation, collateral for loans .There is little to no functional,                 experiential or composable utility which limiting their long-term value.
-     
-  4. Rapid Decline in User Engagement: After the initial excitement of minting fades, users are given no reason to return. Without ongoing interaction or incentives, communities lose momentum        and attention quietly disappears.
+  1. RWA and NFTs become static after tokenization. 
+  2. Capital is locked, user attention fades
+  3. Asset utility is largely limited to trading or lending.
 
 ## Solution
  1. Interactive Asset Activation: Cointown transforms tokenized assets into interactive NFTs inside a Monopoly-style game world. Instead of remaining idle after issuance, each asset becomes an      active, playable component of a living on-chain economy.
