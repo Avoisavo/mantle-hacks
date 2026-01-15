@@ -23,6 +23,18 @@ Overall, the project explores how gamification can act as a practical entry poin
 
  3. Rent Generation & Shared Economy : When other players land on owned assets, NFTs generate rent and rewards. This enables continuous yield from ownership.
     
+### Architectural flow
+
+The CoinTown application follows a three-tier architecture pattern, flowing from the user interface layer down through the API layer to the blockchain layer.
+
+**Frontend Layer (Next.js Application)**
+The frontend is built as a Next.js application that serves as the primary user interface. It consists of three main sub-layers: Pages, Components, and Hooks. Pages handle routing and page-level logic, Components contain reusable UI elements and business logic, and Hooks manage state and side effects. The frontend communicates with external services like Google OAuth and WalletConnect for authentication, and connects to the API layer for backend operations.
+
+**API Layer (Next.js API Routes)**
+The API layer acts as an intermediary between the frontend and blockchain. It contains three primary service modules: Account Management handles smart account creation and queries, Auth/KYC Verification processes identity verification requests and signatures, and Game Server manages multiplayer game state synchronization via WebSocket connections. The API layer receives requests from the frontend, processes them, and interacts with the blockchain layer on behalf of users.
+
+**Blockchain Layer (Mantle Sepolia)**
+The blockchain layer consists of multiple smart contracts deployed on Mantle Sepolia testnet. The Smart Account Factory creates ERC-4337 smart accounts using deterministic address generation. The KYC Registry stores identity verification status for users. Town Token Contracts handle the game's token economy, including top-up and deduct operations. NFT Contracts manage the real-world asset NFTs that players can own in the game. All contract interactions flow through the API layer, which signs transactions using server-side wallets or user signatures.
 
 ## Technology Stack
 
@@ -65,6 +77,95 @@ Overall, the project explores how gamification can act as a practical entry poin
 
 
 ## Deployment Guide
+Quick reference for deploying CoinTown contracts to Mantle Sepolia.
+
+## Prerequisites
+
+- Node.js v18+
+- Testnet MNT from [Mantle Faucet](https://faucet.mantle.xyz/)
+- `.env.local` configured with `DEPLOYER_PRIVATE_KEY`
+
+## Setup
+
+```bash
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Compile contracts
+npx hardhat compile
+```
+
+## Deploy Contracts
+
+### Smart Account Factory (ERC-4337)
+
+```bash
+npx hardhat run scripts/deploy.js --network mantleSepolia
+```
+
+Update `.env.local`:
+```env
+NEXT_PUBLIC_FACTORY_ADDRESS=<deployed_address>
+```
+
+### KYC Registry
+
+```bash
+npx ts-node scripts/deploy-kyc.ts
+```
+
+Update `.env.local`:
+```env
+NEXT_PUBLIC_KYC_REGISTRY_ADDRESS=<deployed_address>
+KYC_SIGNER_ADDRESS=<relay_wallet_address>
+```
+
+### Town Token Contracts
+
+```bash
+# Deploy TopUp contract
+npx ts-node scripts/deploy-town-native.ts
+
+# Deploy Deduct contract
+npx ts-node scripts/deploy-town-deduct.ts
+```
+
+Update `utils/address.ts` with deployed addresses.
+
+### NFT Contracts
+
+```bash
+# Deploy basic NFT
+npx ts-node scripts/deploy-nft-mantle.ts
+
+# Deploy 32 RWA assets
+npx ts-node scripts/deploy-32-rwa.ts
+```
+
+## Verify Deployment
+
+Check contract on [Mantle Explorer](https://sepolia.mantlescan.xyz/):
+
+```bash
+curl https://rpc.sepolia.mantle.xyz \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["<address>","latest"],"id":1}'
+```
+
+## Network Info
+
+- **Chain ID:** 5003
+- **RPC:** https://rpc.sepolia.mantle.xyz
+- **Explorer:** https://sepolia.mantlescan.xyz
+- **Faucet:** https://faucet.mantle.xyz/
+
+## Troubleshooting
+
+- **No MNT:** Get from [faucet](https://faucet.mantle.xyz/)
+- **Artifact not found:** Run `npx hardhat compile`
+- **Nonce errors:** Wait for pending transactions to confirm
+
 
 
 
