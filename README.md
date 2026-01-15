@@ -1,23 +1,66 @@
 # CoinTown - 3D Monopoly Game 🎮💰
 
-A futuristic 3D monopoly game with Web3 integration and ERC-4337 account abstraction.
+This project is a consumer-facing GameFi application. It turns Real World Asset (RWA) ownership and yield into a Monopoly-style game built on the Mantle Network. Instead of understanding complex RealFi dashboards and financial terms, this platform presents RWA concepts through familiar actions. For example, buying properties, collecting rent, upgrading assets and competing with other players. Each in-game property represents a tokenized or RWA-backed asset. Meanwhile, rent or rewards reflect real world cash flow logic in a simplified, understandable way.
 
-## Features
+The goal is to make RWA feel less intimidating and less boring. Instead of facing smart contracts and complex interfaces, users are invited to play. Over time, they naturally learn how ownership, yield and asset growth work without needing prior DeFi knowledge.
 
-- 🎨 **Futuristic Neon Theme** - Purple and pink gradient with glowing effects
-- ⛓️ **Web3 Integration** - RainbowKit for wallet connections
-- 🔐 **Account Abstraction** - ERC-4337 smart accounts via Google OAuth
-- 🌐 **Social Login** - Google OAuth for Web2-style onboarding
-- 💎 **Built on Mantle** - Mantle Sepolia testnet
+Mantle is used because it supports low-cost, fast transactions which are essential for frequent game actions such as trades, rent payouts and upgrades. These interactions would be frustrating or too expensive on high-fee networks, but work smoothly on Mantle.
 
-## Tech Stack
+Overall, the project explores how gamification can act as a practical entry point into RealFi, making real-world asset concepts more approachable and engaging.
 
-- **Next.js 16** - React framework
-- **Tailwind CSS v4** - Styling
-- **RainbowKit + wagmi** - Web3 integration
-- **NextAuth.js** - Authentication
-- **Framer Motion** - Animations
-- **Three.js** - 3D graphics
+## Problem Statement
+
+RWA and NFTs become static after tokenization. Capital is locked, user attention fades. Asset utility is largely limited to trading or lending.
+
+## Solution
+
+Monopoly-style GameFi platform real-world assets into playable NFTs where ownership NFTs are used, upgraded and generate rent through player interactions.
+
+### Architectural Flow
+
+The CoinTown application follows a three-tier architecture pattern, flowing from the user interface layer down through the API layer to the blockchain layer.
+
+**Frontend Layer (Next.js Application)**
+The frontend is built as a Next.js application that serves as the primary user interface. It consists of three main sub-layers: Pages, Components, and Hooks. Pages handle routing and page-level logic, Components contain reusable UI elements and business logic, and Hooks manage state and side effects. The frontend communicates with external services like Google OAuth and WalletConnect for authentication, and connects to the API layer for backend operations.
+
+**API Layer (Next.js API Routes)**
+The API layer acts as an intermediary between the frontend and blockchain. It contains three primary service modules: Account Management handles smart account creation and queries, Auth/KYC Verification processes identity verification requests and signatures, and Game Server manages multiplayer game state synchronization via WebSocket connections. The API layer receives requests from the frontend, processes them, and interacts with the blockchain layer on behalf of users.
+
+**Blockchain Layer (Mantle Sepolia)**
+The blockchain layer consists of multiple smart contracts deployed on Mantle Sepolia testnet. The Smart Account Factory creates ERC-4337 smart accounts using deterministic address generation. The KYC Registry stores identity verification status for users. Town Token Contracts handle the game's token economy, including top-up and deduct operations. NFT Contracts manage the real-world asset NFTs that players can own in the game. All contract interactions flow through the API layer, which signs transactions using server-side wallets or user signatures.
+
+## Technology Stack
+
+### Frontend
+- **Framework**: Next.js 16.1.1 (App Router)
+- **UI Library**: React 19.2.3
+- **Styling**: Tailwind CSS v4
+- **3D Graphics**: Three.js 0.155.0, React Three Fiber, React Three Drei
+- **Physics**: Cannon.js (cannon-es)
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+
+### Web3 Integration
+- **Wallet Connection**: RainbowKit 2.2.10
+- **Ethereum Library**: wagmi 3.2.0, viem 2.43.5
+- **Account Abstraction**: Alchemy AA SDK (@alchemy/aa-accounts, @alchemy/aa-core)
+- **Bridge**: Mantle SDK (@mantleio/sdk)
+
+### Backend & Infrastructure
+- **API**: Next.js API Routes
+- **Real-time**: WebSocket Server (Node.js + ws)
+- **State Management**: TanStack Query (React Query)
+- **Environment**: Node.js with TypeScript
+
+### Smart Contracts
+- **Language**: Solidity 0.8.20
+- **Framework**: Hardhat 3.1.2
+- **Libraries**: OpenZeppelin Contracts 5.4.0
+- **Standards**: ERC-4337, ERC-721 (NFTs), ERC-20 (Tokens)
+
+### Networks
+- **L1**: Ethereum Sepolia (Chain ID: 11155111)
+- **L2**: Mantle Sepolia Testnet (Chain ID: 5003)
 
 ## Quick Start
 
@@ -51,23 +94,42 @@ npm run dev
 
 Visit http://localhost:3000
 
-## Project Structure
-
-```
-mantle-hacks/
-├── components/          # React components
-├── contracts/           # Smart contracts (SimpleAccount, Factory)
-├── lib/                 # Utilities (wagmi, mantle config)
-├── pages/               # Next.js pages & API routes
-└── scripts/             # Deployment & verification scripts
-```
-
-## Authentication
-
-**Google Login (Web2)** → Creates ERC-4337 smart account
-**Wallet Connect (Web3)** → Direct wallet connection
-
 ## Deployment
+
+### Smart Contracts
+
+Deploy contracts to Mantle Sepolia testnet:
+
+```bash
+# Compile contracts
+npx hardhat compile
+
+# Deploy Smart Account Factory (ERC-4337)
+npx hardhat run scripts/deploy.js --network mantleSepolia
+
+# Deploy KYC Registry
+npx ts-node scripts/deploy-kyc.ts
+
+# Deploy Town Token Contracts
+npx ts-node scripts/deploy-town-native.ts
+npx ts-node scripts/deploy-town-deduct.ts
+
+# Deploy NFT Contracts
+npx ts-node scripts/deploy-nft-mantle.ts
+npx ts-node scripts/deploy-32-rwa.ts
+```
+
+**Prerequisites:**
+- Get testnet MNT from [Mantle Faucet](https://faucet.mantle.xyz/)
+- Set `DEPLOYER_PRIVATE_KEY` in `.env.local`
+- Set `RELAY_PRIVATE_KEY` for KYC Registry (optional)
+
+**Network Info:**
+- Chain ID: 5003
+- RPC: https://rpc.sepolia.mantle.xyz
+- Explorer: https://sepolia.mantlescan.xyz
+
+### Application
 
 ```bash
 npm run build
@@ -78,6 +140,31 @@ Or deploy with Vercel:
 ```bash
 vercel
 ```
+
+## Contract Addresses
+
+### Smart Account Contracts
+- **SimpleAccountFactory**: `0x7c4d0215d5DffDab6c439075B48a1636754c8b26`
+
+### Identity & KYC
+- **KYC Registry**: `0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86`
+
+### Token Contracts
+- **TOWN Token**: `0xF682C00965fA8Fe475cEE15cD9Ec514abD71DD49`
+- **TownTopUpNative**: `0x2e99559aE2d30dF514559C883Cfb9997f82a39bf`
+- **TownDeductNative**: `0x9acb9dD1573c2889906e0B3DF66ee24Cd4a2168C`
+
+### NFT Contracts
+- **MyNFT**: `0x3B73Aa8c41e814424EE9f557D25282e1c7FCa23F`
+
+### Token Addresses
+- **MNT Token (Mantle Sepolia)**: `0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17`
+- **MNT Token (L1 Sepolia)**: `0x65e37b558f64e2be5768db46df22f93d85741a9e`
+- **Native MNT (L2)**: `0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000`
+
+### Chain IDs
+- **Ethereum Sepolia (L1)**: `11155111`
+- **Mantle Sepolia (L2)**: `5003`
 
 ## Resources
 
