@@ -1,6 +1,9 @@
 # CoinTown - 3D Monopoly Game 🎮💰
 
-A futuristic 3D monopoly game with Web3 integration and ERC-4337 account abstraction.
+This project is a consumer-facing GameFi application. It turns Real World Asset (RWA) ownership and yield into a Monopoly-style game that built on the Mantle Network. Instead of understanding complex RealFi dashboards and financial terms,this platform presents RWA concepts through familiar actions. For example, buying properties, collecting rent, upgrading assets and competing with other players. Each in-game property represents a tokenized or RWA-backed asset. Meanwhile, rent or rewards reflect real world cash flow logic in a simplified, understandable way. 
+The goal is to make RWA feel less intimidating and less boring. Instead of facing smart contracts and complex interfaces, users are invited to play. Over time, they naturally learn how ownership, yield and asset growth work without needing prior DeFi knowledge. 
+Mantle is used because it supports low-cost, fast transactions which are essential for frequent game actions such as trades, rent payouts and upgrades. These interactions would be frustrating or too expensive on high-fee networks, but work smoothly on Mantle. 
+Overall, the project explores how gamification can act as a practical entry point into RealFi, making real-world asset concepts more approachable and engaging.
 
 
  ## Problem Statement
@@ -60,58 +63,6 @@ A futuristic 3D monopoly game with Web3 integration and ERC-4337 account abstrac
 - **L2**: Mantle Sepolia Testnet (Chain ID: 5003)
 
 
-
-
-
-
-
-## Quick Start
-
-1. **Install dependencies**
-```bash
-npm install --legacy-peer-deps
-```
-
-2. **Set up environment variables**
-
-Create `.env.local`:
-```env
-# Required
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=generate_with_openssl_rand_base64_32
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-DEPLOYER_PRIVATE_KEY=your_deployer_private_key
-NEXT_PUBLIC_FACTORY_ADDRESS=0x7c4d0215d5DffDab6c439075B48a1636754c8b26
-```
-
-Get credentials from:
-- WalletConnect: https://cloud.walletconnect.com/
-- Google OAuth: https://console.cloud.google.com/
-
-3. **Run development server**
-```bash
-npm run dev
-```
-
-Visit http://localhost:3000
-
-## Project Structure
-
-```
-mantle-hacks/
-├── components/          # React components
-├── contracts/           # Smart contracts (SimpleAccount, Factory)
-├── lib/                 # Utilities (wagmi, mantle config)
-├── pages/               # Next.js pages & API routes
-└── scripts/             # Deployment & verification scripts
-```
-
-## Authentication
-
-**Google Login (Web2)** → Creates ERC-4337 smart account
-**Wallet Connect (Web3)** → Direct wallet connection
 
 ## Deployment Guide
 
