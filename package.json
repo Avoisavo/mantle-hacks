@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "game-server": "npx tsx server/gameServer.ts"
   },
   "dependencies": {
     "@alchemy/aa-accounts": "^3.19.0",
@@ -36,7 +37,8 @@
     "three": "^0.155.0",
     "three-stdlib": "^2.36.1",
     "viem": "^2.43.5",
-    "wagmi": "^3.2.0"
+    "wagmi": "^3.2.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.8.0",
@@ -48,6 +50,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "chai": "^6.2.2",
     "dotenv": "^17.2.3",
     "eslint": "^9",
@@ -55,13 +58,9 @@
     "hardhat": "^3.1.2",
     "solc": "^0.8.19",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typechain": "^8.3.2",
     "typescript": "^5"
-  },
-  "overrides": {
-    "@mantleio/sdk": {
-      "ethers": "5.7.2"
-    }
   },
   "overrides": {
     "zod": "^3.25.76"
