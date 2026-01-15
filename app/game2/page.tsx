@@ -2345,7 +2345,7 @@ export default function Game2Page() {
 
     // Separate scene for house display in overlay
     useEffect(() => {
-        if (!houseCanvasRef.current || !houseContainerRef.current || !showTileOverlay) return;
+        if (!houseCanvasRef.current || !houseContainerRef.current || !showTileOverlay || rightViewMode !== 'model') return;
 
         const scene = new THREE.Scene();
         // Transparent background - only show the house
@@ -2444,7 +2444,7 @@ export default function Game2Page() {
             cancelAnimationFrame(animationFrameId);
             renderer.dispose();
         };
-    }, [showTileOverlay]);
+    }, [showTileOverlay, rightViewMode]);
 
     // Helper function to handle action selection (END TURN, PAY, TRADE, BANKRUPT)
     const handleActionSelection = () => {
@@ -2872,7 +2872,7 @@ export default function Game2Page() {
                                     <NFTCard
                                         id={1}
                                         name="Luxury Villa"
-                                        image="/game2/house_01.glb"
+                                        image="/nft/1.png"
                                         rarity="LEGENDARY"
                                         price="1,500,000"
                                         description="A stunning luxury villa with panoramic views, featuring modern architecture, premium finishes, and state-of-the-art amenities. Perfect for those seeking the ultimate in comfort and style."
