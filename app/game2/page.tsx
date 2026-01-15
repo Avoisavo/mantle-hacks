@@ -646,7 +646,7 @@ export default function Game2Page() {
         const diceTextures = createDiceTextures();
 
         // Create dice mesh
-        const diceSize = 0.21;
+        const diceSize = 0.25; // Increased size for better visibility
         const diceGeometry = new THREE.BoxGeometry(diceSize, diceSize, diceSize);
         const diceMaterials = diceTextures.map(texture =>
             new THREE.MeshStandardMaterial({
@@ -1466,11 +1466,11 @@ export default function Game2Page() {
 
                     // Show dice and position it in front of camera
                     if (character) {
-                        const distance = 0.8;
+                        const distance = 1.0; // Increased distance for better visibility
                         const angle20 = (20 * Math.PI) / 180;
                         const offset = new THREE.Vector3(
                             -distance * Math.cos(angle20),
-                            0.1, // Even lower: 10.55 + 0.1 = 10.65. Floor 10.6. Might clip slightly.
+                            0.15, // Raised dice position to be fully visible
                             -distance * Math.sin(angle20)
                         );
                         offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
@@ -1617,11 +1617,11 @@ export default function Game2Page() {
                     // Use player-specific angle to match camera
                     const currentPlayerIndex = currentPlayerIndexRef.current;
                     const isPlayer2 = currentPlayerIndex === 1;
-                    const distance = 1.2;
+                    const distance = 1.4; // Increased distance for better visibility
                     const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
                     const offset = new THREE.Vector3(
                         -distance * Math.cos(angle),
-                        0.1, // Even lower
+                        0.15, // Raised dice position to be fully visible
                         -distance * Math.sin(angle)
                     );
                     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
@@ -1991,11 +1991,11 @@ export default function Game2Page() {
             // Use player-specific angle to match camera
             const currentPlayerIndex = currentPlayerIndexRef.current;
             const isPlayer2 = currentPlayerIndex === 1;
-            const distance = 1.2;
+            const distance = 1.4; // Increased distance for better visibility
             const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
             const spawnOffset = new THREE.Vector3(
                 -distance * Math.cos(angle),
-                0.24,
+                0.2, // Raised spawn position to be fully visible
                 -distance * Math.sin(angle)
             );
 
@@ -2139,7 +2139,7 @@ export default function Game2Page() {
                     const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
                     const offset = new THREE.Vector3(
                         -distance * Math.cos(angle),
-                        0.1,
+                        0.15, // Raised dice position to be fully visible
                         -distance * Math.sin(angle)
                     );
                     // Use the updated rotation
