@@ -11,6 +11,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { LogOut, Wallet, AlertCircle } from 'lucide-react';
 import { AvatarIcon } from '@/components/game/ui/AvatarIcon';
+import NFTCard from '@/components/nftcard';
 
 // Helper function to create dice textures
 function createDiceTextures(): THREE.Texture[] {
@@ -148,6 +149,7 @@ export default function Game2Page() {
     const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
     const sceneRef = useRef<THREE.Scene | null>(null);
     const currentTileRef = useRef<number>(0);
+    const [rightViewMode, setRightViewMode] = useState<'model' | 'nft'>('model');
 
     // Account state
     const { data: session } = useSession();
@@ -1941,9 +1943,64 @@ export default function Game2Page() {
 
                     {/* Right side - house 3D scene (60%) */}
                     <div className="w-[60%] relative">
-                        {/* House 3D Scene */}
-                        <div ref={houseContainerRef} className="w-full h-full relative">
+                        {/* Toggle buttons - vertically centered on right */}
+                        <div className="absolute top-1/2 right-4 -translate-y-1/2 z-10 flex flex-col gap-2">
+                            <button
+                                onClick={() => setRightViewMode('model')}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                    rightViewMode === 'model'
+                                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/50 scale-110'
+                                        : 'bg-black/50 text-cyan-400 border border-cyan-500/50 hover:bg-black/70'
+                                }`}
+                                title="View 3D Model"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M2 20h20"></path>
+                                    <path d="m5 16 4-8 4 6 5-10 4 8"></path>
+                                    <path d="M3.5 12h17"></path>
+                                    <path d="M7 8v8"></path>
+                                    <path d="M12 10v4"></path>
+                                    <path d="M17 8v8"></path>
+                                </svg>
+                            </button>
+                            <button
+                                onClick={() => setRightViewMode('nft')}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                    rightViewMode === 'nft'
+                                        ? 'bg-purple-500 text-black shadow-lg shadow-purple-500/50 scale-110'
+                                        : 'bg-black/50 text-purple-400 border border-purple-500/50 hover:bg-black/70'
+                                }`}
+                                title="View NFT Card"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Content - conditionally render model or NFT card */}
+                        {/* House 3D Scene - always rendered but visibility controlled */}
+                        <div ref={houseContainerRef} className="w-full h-full relative" style={{ display: rightViewMode === 'model' ? 'block' : 'none' }}>
                             <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                        </div>
+
+                        {/* NFT Card Display - visibility controlled */}
+                        <div className="w-full h-full flex items-center justify-center p-8" style={{ display: rightViewMode === 'nft' ? 'flex' : 'none' }}>
+                            <div className="w-full max-w-md" style={{ transform: 'translate(10%, 10%)' }}>
+                                <NFTCard
+                                    id={1}
+                                    name="Luxury Villa"
+                                    image="/game2/house_01.glb"
+                                    rarity="LEGENDARY"
+                                    price="1,500,000"
+                                    description="A stunning luxury villa with panoramic views, featuring modern architecture, premium finishes, and state-of-the-art amenities. Perfect for those seeking the ultimate in comfort and style."
+                                    color="#00ffff"
+                                    glowColor="#00ffff"
+                                    contractAddress="0x1234567890abcdef1234567890abcdef12345678"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
