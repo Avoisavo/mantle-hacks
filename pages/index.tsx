@@ -8,7 +8,7 @@ import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Wallet, Play, Package, AlertCircle } from "lucide-react";
+import { LogOut, Wallet, Play, Package, AlertCircle, Star, Zap, Globe, X, Target, Crown, Flame } from "lucide-react";
 
 // Dynamically import login components to avoid SSR issues
 const ConnectButton = dynamic(() => import("@/components/ConnectButton"), { ssr: false });
@@ -120,6 +120,7 @@ export default function Home() {
   const router = useRouter();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showDifficultySelection, setShowDifficultySelection] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [chickenHit, setChickenHit] = useState(false);
   const [feathers, setFeathers] = useState<Array<{ id: number; x: number; y: number; rotation: number }>>([]);
@@ -273,7 +274,7 @@ export default function Home() {
   };
 
   const handleStartGame = () => {
-    router.push("/game2");
+    setShowDifficultySelection(true);
   };
 
   const handleViewAssets = () => {
@@ -679,6 +680,105 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Difficulty Selection Modal */}
+        <AnimatePresence>
+          {showDifficultySelection && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowDifficultySelection(false)}
+                className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100]"
+              />
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="fixed inset-0 z-[101] flex items-center justify-center p-6"
+              >
+                <div className="bg-[#130E22]/90 backdrop-blur-[20px] border-[8px] border-[#ff00ff] rounded-[40px] p-10 max-w-2xl w-full shadow-[0_0_60px_rgba(255,0,255,0.3)]">
+                  <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-4xl md:text-5xl font-black text-[#ff00ff] italic tracking-tight uppercase leading-none" style={{ fontFamily: '"Luckiest Guy", cursive' }}>
+                      Select Difficulty
+                    </h2>
+                    <button onClick={() => setShowDifficultySelection(false)} className="bg-white/10 p-3 rounded-full border-2 border-white/20 hover:bg-white/20 transition-all">
+                      <X size={32} className="text-white" />
+                    </button>
+                  </div>
+
+                  <p className="text-white/80 text-lg mb-10 text-center font-medium" style={{ fontFamily: '"Chelsea Market", cursive' }}>
+                    Choose your challenge level and start your journey!
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Simple */}
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -5 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push('/game2?difficulty=simple')}
+                      className="group relative bg-gradient-to-br from-[#22c55e] to-[#16a34a] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#15803d] active:translate-y-[6px] active:shadow-[0_4px_0_#15803d] transition-all"
+                    >
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                          <Target className="text-white" size={36} strokeWidth={3} />
+                        </div>
+                        <h3 className="text-3xl font-black text-white uppercase tracking-tight" style={{ fontFamily: '"Luckiest Guy", cursive' }}>Simple</h3>
+                        <div className="flex gap-1 mt-2">
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                          <Star className="text-white/40" size={16} />
+                          <Star className="text-white/40" size={16} />
+                        </div>
+                      </div>
+                    </motion.button>
+
+                    {/* Medium */}
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -5 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push('/game2?difficulty=medium')}
+                      className="group relative bg-gradient-to-br from-[#3b82f6] to-[#2563eb] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[6px] active:shadow-[0_4px_0_#1d4ed8] transition-all"
+                    >
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                          <Flame className="text-white" size={36} strokeWidth={3} />
+                        </div>
+                        <h3 className="text-3xl font-black text-white uppercase tracking-tight" style={{ fontFamily: '"Luckiest Guy", cursive' }}>Medium</h3>
+                        <div className="flex gap-1 mt-2">
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                          <Star className="text-white/40" size={16} />
+                        </div>
+                      </div>
+                    </motion.button>
+
+                    {/* Luxury */}
+                    <motion.button
+                      whileHover={{ scale: 1.05, y: -5 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push('/game2?difficulty=luxury')}
+                      className="group relative bg-gradient-to-br from-[#a855f7] to-[#9333ea] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#7c3aed] active:translate-y-[6px] active:shadow-[0_4px_0_#7c3aed] transition-all"
+                    >
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                          <Crown className="text-white" size={36} strokeWidth={3} />
+                        </div>
+                        <h3 className="text-3xl font-black text-white uppercase tracking-tight" style={{ fontFamily: '"Luckiest Guy", cursive' }}>Luxury</h3>
+                        <div className="flex gap-1 mt-2">
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                          <Star className="text-yellow-300" size={16} fill="#fde047" />
+                        </div>
+                      </div>
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </main>
     </>
   );

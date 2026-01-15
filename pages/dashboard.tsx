@@ -10,20 +10,23 @@ import { parseEther } from "viem";
 import Head from "next/head";
 import { useTownBalance } from "@/hooks/useTownBalance";
 import { useMntBalance } from "@/hooks/useMntBalance";
-import { 
-  ShieldCheck, 
-  UserCheck, 
-  PlusCircle, 
-  Send, 
-  Copy, 
-  LogOut, 
-  Wallet as WalletIcon, 
+import {
+  ShieldCheck,
+  UserCheck,
+  PlusCircle,
+  Send,
+  Copy,
+  LogOut,
+  Wallet as WalletIcon,
   CheckCircle2,
   X,
   Globe,
   Zap,
   Star,
-  ArrowRight
+  ArrowRight,
+  Target,
+  Crown,
+  Flame
 } from "lucide-react";
 
 interface SmartAccountData {
@@ -43,6 +46,7 @@ export default function Dashboard() {
   const [accountData, setAccountData] = useState<SmartAccountData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTreasury, setShowTreasury] = useState(false);
+  const [showDifficultySelection, setShowDifficultySelection] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
@@ -145,7 +149,7 @@ export default function Dashboard() {
       if (!targetAddress) return;
       try {
         const { ethers } = await import('ethers');
-        const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+        const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
         const abi = ["function hasPassed(address user) external view returns (bool)"];
         const contract = new ethers.Contract("0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86", abi, provider);
         const passed = await contract.hasPassed(targetAddress);
@@ -236,7 +240,11 @@ export default function Dashboard() {
                  <img src={session?.user?.image || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${connectedWallet || 'cointown'}`} alt="User" className="w-full h-full" />
               </div>
               <span className="text-black font-black text-sm">
-                {connectedWallet ? `${connectedWallet.slice(0, 6)}...${connectedWallet.slice(-4)}` : "NOT CONNECTED"}
+                {connectedWallet
+                  ? `${connectedWallet.slice(0, 6)}...${connectedWallet.slice(-4)}`
+                  : session?.user?.name
+                  ? session.user.name
+                  : "NOT CONNECTED"}
               </span>
               <button 
                 onClick={handleSignOut} 
@@ -374,7 +382,7 @@ export default function Dashboard() {
                    transition={{ duration: 4, repeat: Infinity }}
                    whileHover={{ scale: 1.06 }}
                    whileTap={{ scale: 0.94 }}
-                   onClick={() => router.push('/game2')}
+                   onClick={() => setShowDifficultySelection(true)}
                    className="relative group bg-[#4ADE80] px-10 py-5 rounded-[35px] border-[6px] border-white shadow-[0_12px_0_#166534] flex items-center gap-5 active:translate-y-[6px] active:shadow-[0_6px_0_#166534] transition-all"
                  >
                     <span className="relative z-10 text-3xl md:text-4xl font-black italic text-black tracking-tight uppercase" style={{ fontFamily: '"Luckiest Guy", cursive' }}>ENTER COINTOWN!</span>
@@ -384,6 +392,101 @@ export default function Dashboard() {
 
            </div>
         </div>
+
+        {/* Difficulty Selection Modal */}
+        <AnimatePresence>
+           {showDifficultySelection && (
+             <>
+               <motion.div
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 exit={{ opacity: 0 }}
+                 onClick={() => setShowDifficultySelection(false)}
+                 className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100]"
+               />
+               <motion.div
+                 initial={{ scale: 0.8, opacity: 0 }}
+                 animate={{ scale: 1, opacity: 1 }}
+                 exit={{ scale: 0.8, opacity: 0 }}
+                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                 className="fixed inset-0 z-[101] flex items-center justify-center p-6"
+               >
+                  <div className="bg-[#130E22] border-[8px] border-[#4ADE80] rounded-[40px] p-10 max-w-2xl w-full shadow-[0_0_60px_rgba(74,222,128,0.3)]">
+                     <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-4xl md:text-5xl font-black text-[#4ADE80] italic tracking-tight uppercase leading-none">Select Difficulty</h2>
+                        <button onClick={() => setShowDifficultySelection(false)} className="bg-white/10 p-3 rounded-full border-2 border-white/20 hover:bg-white/20 transition-all">
+                           <X size={32} className="text-white" />
+                        </button>
+                     </div>
+
+                     <p className="text-white/80 text-lg mb-10 text-center font-medium">Choose your challenge level and start your journey!</p>
+
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Simple */}
+                        <motion.button
+                           whileHover={{ scale: 1.05, y: -5 }}
+                           whileTap={{ scale: 0.95 }}
+                           onClick={() => router.push('/game2?difficulty=simple')}
+                           className="group relative bg-gradient-to-br from-[#22c55e] to-[#16a34a] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#15803d] active:translate-y-[6px] active:shadow-[0_4px_0_#15803d] transition-all"
+                        >
+                           <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                                 <Target className="text-white" size={36} strokeWidth={3} />
+                              </div>
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight">Simple</h3>
+                              <div className="flex gap-1 mt-2">
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                                 <Star className="text-white/40" size={16} />
+                                 <Star className="text-white/40" size={16} />
+                              </div>
+                           </div>
+                        </motion.button>
+
+                        {/* Moderate */}
+                        <motion.button
+                           whileHover={{ scale: 1.05, y: -5 }}
+                           whileTap={{ scale: 0.95 }}
+                           onClick={() => router.push('/game2?difficulty=medium')}
+                           className="group relative bg-gradient-to-br from-[#3b82f6] to-[#2563eb] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#1d4ed8] active:translate-y-[6px] active:shadow-[0_4px_0_#1d4ed8] transition-all"
+                        >
+                           <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                                 <Flame className="text-white" size={36} strokeWidth={3} />
+                              </div>
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight">Medium</h3>
+                              <div className="flex gap-1 mt-2">
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                                 <Star className="text-white/40" size={16} />
+                              </div>
+                           </div>
+                        </motion.button>
+
+                        {/* Luxury */}
+                        <motion.button
+                           whileHover={{ scale: 1.05, y: -5 }}
+                           whileTap={{ scale: 0.95 }}
+                           onClick={() => router.push('/game2?difficulty=luxury')}
+                           className="group relative bg-gradient-to-br from-[#a855f7] to-[#9333ea] p-8 rounded-[30px] border-[6px] border-white shadow-[0_8px_0_#7c3aed] active:translate-y-[6px] active:shadow-[0_4px_0_#7c3aed] transition-all"
+                        >
+                           <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                                 <Crown className="text-white" size={36} strokeWidth={3} />
+                              </div>
+                              <h3 className="text-3xl font-black text-white uppercase tracking-tight">Luxury</h3>
+                              <div className="flex gap-1 mt-2">
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                                 <Star className="text-yellow-300" size={16} fill="#fde047" />
+                              </div>
+                           </div>
+                        </motion.button>
+                     </div>
+                  </div>
+               </motion.div>
+             </>
+           )}
+        </AnimatePresence>
 
         {/* Treasury Drawer */}
         <AnimatePresence>

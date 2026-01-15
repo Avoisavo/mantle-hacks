@@ -24,7 +24,7 @@ export function useTownBalance(targetAddress?: string) {
         const fetchBalance = async () => {
             try {
                 setIsLoading(true);
-                const provider = new ethers.providers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
+                const provider = new ethers.JsonRpcProvider('https://rpc.sepolia.mantle.xyz');
                 const contract = new ethers.Contract(TOWN_TOKEN_NATIVE_ADDRESS, TOWN_TOKEN_ABI, provider);
 
                 const [rawBalance, decimals] = await Promise.all([
@@ -32,7 +32,7 @@ export function useTownBalance(targetAddress?: string) {
                     contract.decimals()
                 ]);
 
-                const formatted = ethers.utils.formatUnits(rawBalance, decimals);
+                const formatted = ethers.formatUnits(rawBalance, decimals);
                 // Format to 2 decimal places
                 const balanceNum = parseFloat(formatted);
                 setBalance(balanceNum.toFixed(2));

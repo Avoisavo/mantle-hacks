@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import * as CANNON from 'cannon-es';
 import { useSession, signOut } from 'next-auth/react';
 import { useAccount, useDisconnect, useWriteContract, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -16,6 +17,7 @@ import { ABI as TownTokenABI } from '@/utils/towntoken';
 import { TOWN_DEDUCT_NATIVE_ADDRESS, TOWN_TOKEN_NATIVE_ADDRESS } from '@/utils/address';
 import { useTownBalance } from '@/hooks/useTownBalance';
 import { useMntBalance } from '@/hooks/useMntBalance';
+import NFTCard from '@/components/nftcard';
 
 // Helper function to create dice textures
 function createDiceTextures(): THREE.Texture[] {
@@ -122,6 +124,29 @@ function getDiceValue(diceBody: CANNON.Body): number {
     return topFace;
 }
 
+// Helper to remove root motion (forward/backward movement) from animation
+function removeRootMotion(clip: THREE.AnimationClip) {
+    clip.tracks.forEach(track => {
+        // Look for position tracks of the root/hips
+        // Most Mixamo animations use "mixamorigHips.position" or "Hips.position"
+        if (track.name.endsWith('.position') &&
+            (track.name.toLowerCase().includes('hips') || track.name.toLowerCase().includes('root'))) {
+
+            const values = track.values;
+            // The values array is [x1, y1, z1, x2, y2, z2, ...]
+            // We want to keep Y (vertical bounce) but flatten X and Z to the initial position
+
+            const startX = values[0];
+            const startZ = values[2];
+
+            for (let i = 0; i < values.length; i += 3) {
+                values[i] = startX;     // Normalize X
+                values[i + 2] = startZ; // Normalize Z
+            }
+        }
+    });
+}
+
 // Player data interface
 interface Player {
     id: number;
@@ -167,9 +192,59 @@ export default function Game2Page() {
     const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
-    const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
+    const cityRef = useRef<THREE.Object3D | null>(null);
+    const blackRunModelRef = useRef<THREE.Group | null>(null);
+    const blackStandModelRef = useRef<THREE.Group | null>(null);
+    const blackRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const blackStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const smRunModelRef = useRef<THREE.Group | null>(null);
+    const smStandModelRef = useRef<THREE.Group | null>(null);
+    const smRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const smStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const yellowRunModelRef = useRef<THREE.Group | null>(null);
+    const yellowStandModelRef = useRef<THREE.Group | null>(null);
+    const yellowRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const yellowStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const cyanRunModelRef = useRef<THREE.Group | null>(null);
+    const cyanStandModelRef = useRef<THREE.Group | null>(null);
+    const cyanRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const cyanStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const mixers: THREE.AnimationMixer[] = [];
+
+    // Game player interface (for 3D game logic)
+    interface GamePlayer {
+        id: number;
+        model: THREE.Group | THREE.Object3D | null;
+        currentPosition: number; // 0-31
+        mixer: THREE.AnimationMixer | null;
+        name: string;
+        rotation: number;
+    }
+
     const sceneRef = useRef<THREE.Scene | null>(null);
+    const playersRef = useRef<GamePlayer[]>([
+        { id: 0, name: 'Black', model: null, currentPosition: 0, mixer: null, rotation: 0 },
+        { id: 1, name: 'Yellow', model: null, currentPosition: 8, mixer: null, rotation: 0 },
+        { id: 2, name: 'SM', model: null, currentPosition: 16, mixer: null, rotation: 0 },
+        { id: 3, name: 'Chicken', model: null, currentPosition: 24, mixer: null, rotation: 0 },
+    ]);
+    const currentPlayerIndexRef = useRef(0);
+    const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
     const currentTileRef = useRef<number>(0);
+    const [rightViewMode, setRightViewMode] = useState<'model' | 'nft'>('model');
+
+    // Camera transition refs
+    const isCameraTransitioningRef = useRef(false);
+    const cameraTransitionStartTimeRef = useRef(0);
+    const cameraTransitionStartPosRef = useRef<THREE.Vector3 | null>(null);
+    const cameraTransitionStartTargetRef = useRef<THREE.Vector3 | null>(null);
+    const cameraTransitionEndPosRef = useRef<THREE.Vector3 | null>(null);
+    const cameraTransitionEndTargetRef = useRef<THREE.Vector3 | null>(null);
+
+    // Account state
+    const { data: session } = useSession();
+    const { address: connectedWallet } = useAccount();
+    const { disconnect } = useDisconnect();
     const router = useRouter();
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
@@ -344,7 +419,7 @@ export default function Game2Page() {
             // The dice floats in front of and slightly above the character
             // Based on the 20-degree camera angle and character positioning
             const diceX = canvas.width / 2; // Center of screen for straight up (90 degrees)
-            const diceY = canvas.height * 0.80; // Shorter arc - closer to button
+            const diceY = canvas.height * 0.65; // Longer arc - higher on screen
 
             // Number of lightning bolts based on charge power
             const numBolts = 2 + Math.floor(chargePower / 30);
@@ -559,7 +634,7 @@ export default function Game2Page() {
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.target.set(0, 10.6, 0);
+        controls.target.set(0, 11, 0);
 
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -611,7 +686,7 @@ export default function Game2Page() {
         const diceTextures = createDiceTextures();
 
         // Create dice mesh
-        const diceSize = 0.21;
+        const diceSize = 0.25; // Increased size for better visibility
         const diceGeometry = new THREE.BoxGeometry(diceSize, diceSize, diceSize);
         const diceMaterials = diceTextures.map(texture =>
             new THREE.MeshStandardMaterial({
@@ -635,7 +710,7 @@ export default function Game2Page() {
             mass: 1,
             material: diceMaterial,
             linearDamping: 0.5,
-            angularDamping: 0.5
+            angularDamping: 0.2 // Reduced from 0.5 to 0.2 for smoother, faster spinning
         });
         diceBody.addShape(diceShape);
         diceBody.position.set(0, 15, 0); // Start above the table
@@ -647,7 +722,7 @@ export default function Game2Page() {
         let lastDiceVelocity = 0;
         let velocityCheckCount = 0;
         const VELOCITY_THRESHOLD = 0.1;
-        const STABLE_FRAMES_NEEDED = 30;
+        const STABLE_FRAMES_NEEDED = 20; // Reduced from 30 to 20 for faster detection
 
         // ============ END PHYSICS SETUP ============
 
@@ -937,8 +1012,25 @@ export default function Game2Page() {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        // Make materials transparent so we can fade them
+                        const mesh = child as THREE.Mesh;
+                        if (mesh.material) {
+                            if (Array.isArray(mesh.material)) {
+                                mesh.material.forEach(mat => {
+                                    if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshBasicMaterial) {
+                                        mat.transparent = true;
+                                    }
+                                });
+                            } else {
+                                const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+                                if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshBasicMaterial) {
+                                    mat.transparent = true;
+                                }
+                            }
+                        }
                     }
                 });
+                cityRef.current = city;
                 scene.add(city);
                 console.log('City loaded successfully');
                 checkLoaded();
@@ -979,35 +1071,352 @@ export default function Game2Page() {
 
         tilePositions.push(...leftCol, ...bottomRow, ...rightCol, ...topRow);
 
-        let currentPosition = 0;
-        currentTileRef.current = 0;
-        let currentRotation = 0;
-        let hasStarted = false;
+        // Helper function to position a player at their current tile
+        const positionPlayerAtTile = (player: GamePlayer, position: number) => {
+            if (!player.model) return;
 
-        loader.load(
-            '/game2/greenguy.glb',
-            (gltf) => {
-                character = gltf.scene;
-                character.position.set(firstTileX, 11, firstTileZ);
-                character.rotation.y = 0;
-                character.scale.set(0.6, 0.6, 0.6);
+            const tilePos = tilePositions[position];
+
+            // Calculate rotation based on position - face the direction they'll be walking
+            let rotation = 0;
+            if (position === 0) rotation = 0; // Black model at start - facing forward
+            else if (position === 8) rotation = Math.PI / 2; // Facing forward along path
+            else if (position === 16) rotation = Math.PI; // SM model at corner - facing forward (down)
+            else if (position === 24) rotation = -Math.PI / 2; // Facing forward along path
+            else if (position > 0 && position < 8) rotation = 0; // Left column - facing forward (up)
+            else if (position > 8 && position < 16) rotation = Math.PI / 2; // Bottom row - facing forward (right)
+            else if (position > 16 && position < 24) rotation = Math.PI; // Right column - facing forward (down)
+            else if (position > 24) rotation = -Math.PI / 2; // Top row - facing forward (left)
+
+            player.model.position.set(tilePos.x, 10.6, tilePos.z);
+            player.model.rotation.y = rotation;
+            player.rotation = rotation;
+        };
+
+        // let currentPosition = 0; // Replaced by playersRef
+        // let currentRotation = 0; // Replaced by playersRef
+        let hasStarted = false;
+        currentTileRef.current = 0;
+
+        const fbxLoader = new FBXLoader();
+
+        // Load character (Black Stand) at first tile position
+        fbxLoader.load(
+            '/models/black-stand.fbx',
+            (object) => {
+                const player = playersRef.current[0];
+                blackStandModelRef.current = object;
+                player.model = object;
+                character = object; // Keep for backward compatibility/camera init for now
+                positionPlayerAtTile(player, player.currentPosition);
+                // Ensure rotation matches the calculated rotation
+                object.rotation.y = player.rotation;
+
+                // Scale needed adjustment based on previous tests
+                // User requested 0.7 size
+                const scale = 0.7;
+                character.scale.set(scale, scale, scale);
+
+                // Setup animation mixer
+                const charMixer = new THREE.AnimationMixer(character);
+                blackStandMixerRef.current = charMixer;
+                player.mixer = charMixer;
+                mixers.push(charMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = charMixer.clipAction(object.animations[0]);
+                    action.play();
+                    console.log('Playing animation:', object.animations[0].name);
+                } else {
+                    console.log('No animations found in black-stand.fbx');
+                }
+
                 character.traverse((child) => {
-                    if (child.isMesh) {
+                    if ((child as THREE.Mesh).isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
                 });
                 scene.add(character);
-                console.log('Character loaded successfully');
+                console.log('Black stand loaded successfully');
                 checkLoaded();
             },
-            (progress) => {
-                console.log('Character loading:', (progress.loaded / progress.total * 100) + '%');
+            (xhr) => {
+                console.log('Character loading:', (xhr.loaded / xhr.total * 100) + '%');
             },
             (error) => {
                 console.error('Error loading character:', error);
                 checkLoaded();
             }
+        );
+
+        // Load Black Run model for movement animation
+        fbxLoader.load(
+            '/models/black-run.fbx',
+            (object) => {
+                blackRunModelRef.current = object;
+
+                // Remove root motion from the run animation so it runs "in place"
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false; // Hide initially, only show when moving
+
+                // Setup animation mixer for run model
+                const runMixer = new THREE.AnimationMixer(object);
+                blackRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity); // Loop repeatedly
+                    action.play();
+                    console.log('Playing run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Black run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading black run:', error)
+        );
+
+        // Load secondary model (Yellow Stand) at position 8
+        fbxLoader.load(
+            '/models/yellow-stand.fbx',
+            (object) => {
+                object.scale.set(0.7, 0.7, 0.7);
+                yellowStandModelRef.current = object;
+
+                // Animation
+                const yellowMixer = new THREE.AnimationMixer(object);
+                yellowStandMixerRef.current = yellowMixer;
+                const player = playersRef.current[1];
+                player.model = object;
+                player.mixer = yellowMixer;
+
+                // Position at correct tile position
+                positionPlayerAtTile(player, player.currentPosition);
+                // Ensure rotation matches the calculated rotation
+                object.rotation.y = player.rotation;
+                mixers.push(yellowMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = yellowMixer.clipAction(object.animations[0]);
+                    action.play();
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                scene.add(object);
+                console.log('Yellow stand loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading yellow stand:', error)
+        );
+
+        // Load Yellow Run model
+        fbxLoader.load(
+            '/models/yellow-run.fbx',
+            (object) => {
+                yellowRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                yellowRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing yellow run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Yellow run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading yellow run:', error)
+        );
+
+        // Load Cyan Run model
+        fbxLoader.load(
+            '/models/cyan-run.fbx',
+            (object) => {
+                cyanRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                cyanRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing cyan run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Cyan run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading cyan run:', error)
+        );
+
+        // Load SM Stand model at position 16
+        fbxLoader.load(
+            '/models/sm-stand.fbx',
+            (object) => {
+                object.scale.set(0.7, 0.7, 0.7);
+                smStandModelRef.current = object;
+
+                // Animation
+                const smMixer = new THREE.AnimationMixer(object);
+                smStandMixerRef.current = smMixer;
+                const player = playersRef.current[2];
+                player.model = object;
+                player.mixer = smMixer;
+
+                // Position at correct tile position
+                positionPlayerAtTile(player, player.currentPosition);
+                // Ensure rotation matches the calculated rotation
+                object.rotation.y = player.rotation;
+                mixers.push(smMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = smMixer.clipAction(object.animations[0]);
+                    action.play();
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                scene.add(object);
+                console.log('SM stand loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading SM stand:', error)
+        );
+
+        // Load SM Run model
+        fbxLoader.load(
+            '/models/sm-run.fbx',
+            (object) => {
+                smRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                smRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing sm run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('SM run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading sm run:', error)
+        );
+
+        // Load Cyan Stand (FBX) at position 24
+        fbxLoader.load(
+            '/models/cyan-stand.fbx',
+            (object) => {
+                object.scale.set(0.7, 0.7, 0.7);
+                cyanStandModelRef.current = object;
+
+                // Animation
+                const cyanMixer = new THREE.AnimationMixer(object);
+                cyanStandMixerRef.current = cyanMixer;
+                const player = playersRef.current[3];
+                player.model = object;
+                player.mixer = cyanMixer;
+
+                // Position at correct tile position
+                positionPlayerAtTile(player, player.currentPosition);
+                // Ensure rotation matches the calculated rotation
+                object.rotation.y = player.rotation;
+                mixers.push(cyanMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = cyanMixer.clipAction(object.animations[0]);
+                    action.play();
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                scene.add(object);
+                console.log('Cyan stand loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading Cyan stand:', error)
         );
 
         // Animation loop
@@ -1050,7 +1459,7 @@ export default function Game2Page() {
                         easeOut
                     );
 
-                    controls.target.lerp(new THREE.Vector3(0, 10.6, 0), easeOut);
+                    controls.target.lerp(new THREE.Vector3(0, 11, 0), easeOut);
                 }
                 // Phase 2: Move from (-7, 11.5, -7) to 20-degree position - 2 seconds
                 else if (introAnimationTime < phase1Duration + phase2Duration) {
@@ -1098,17 +1507,18 @@ export default function Game2Page() {
 
                     // Show dice and position it in front of camera
                     if (character) {
-                        const distance = 0.8;
+                        const distance = 1.0; // Increased distance for better visibility
                         const angle20 = (20 * Math.PI) / 180;
                         const offset = new THREE.Vector3(
                             -distance * Math.cos(angle20),
-                            0.15,
+                            0.15, // Raised dice position to be fully visible
                             -distance * Math.sin(angle20)
                         );
                         offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                         const dicePosition = character.position.clone().add(offset);
 
-                        diceBody.position.set(dicePosition.x, dicePosition.y - 0.55, dicePosition.z);
+                        // Removed -0.55 offset that was causing clipping
+                        diceBody.position.set(dicePosition.x, dicePosition.y, dicePosition.z);
                         diceMesh.visible = true;
                     }
                 }
@@ -1128,18 +1538,113 @@ export default function Game2Page() {
                 }
             });
 
+            // Update city opacity based on distance from character
+            if (introComplete && character && cityRef.current) {
+                const cityCenter = new THREE.Vector3(0, 10.56, 0);
+                const characterPos = character.position.clone();
+                characterPos.y = cityCenter.y; // Use same Y level for distance calculation
+                const distanceToCity = characterPos.distanceTo(cityCenter);
+
+                // Fade out city when player is within 3 units, fully visible at 5+ units
+                const fadeStartDistance = 3;
+                const fadeEndDistance = 5;
+                let opacity = 1;
+
+                if (distanceToCity < fadeEndDistance) {
+                    if (distanceToCity < fadeStartDistance) {
+                        opacity = 0.1; // Almost invisible when very close
+                    } else {
+                        // Smooth fade between fadeStartDistance and fadeEndDistance
+                        const fadeRange = fadeEndDistance - fadeStartDistance;
+                        const distanceInRange = distanceToCity - fadeStartDistance;
+                        opacity = 0.1 + (distanceInRange / fadeRange) * 0.9;
+                    }
+                }
+
+                // Apply opacity to all city materials
+                cityRef.current.traverse((child) => {
+                    if (child.isMesh) {
+                        const mesh = child as THREE.Mesh;
+                        if (mesh.material) {
+                            if (Array.isArray(mesh.material)) {
+                                mesh.material.forEach(mat => {
+                                    if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshBasicMaterial) {
+                                        mat.opacity = opacity;
+                                    }
+                                });
+                            } else {
+                                const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+                                if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshBasicMaterial) {
+                                    mat.opacity = opacity;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
             // Update camera to follow character with rotation (only after intro)
             if (introComplete && character) {
-                const distance = 2.5;
-                const angle20 = (20 * Math.PI) / 180; // 20 degrees in radians
-                const offset = new THREE.Vector3(
-                    -distance * Math.cos(angle20),
-                    0.5,
-                    -distance * Math.sin(angle20)
-                );
-                offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
-                camera.position.copy(character.position).add(offset);
-                controls.target.copy(character.position);
+                // Handle smooth camera transition between players
+                if (isCameraTransitioningRef.current) {
+                    const transitionDuration = 1.5; // 1.5 seconds
+                    const elapsed = time - cameraTransitionStartTimeRef.current;
+                    const progress = Math.min(elapsed / transitionDuration, 1);
+
+                    // Smooth ease-in-out curve
+                    const easeInOut = progress < 0.5
+                        ? 2 * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+                    if (cameraTransitionStartPosRef.current && cameraTransitionEndPosRef.current &&
+                        cameraTransitionStartTargetRef.current && cameraTransitionEndTargetRef.current) {
+                        // Interpolate camera position
+                        camera.position.lerpVectors(
+                            cameraTransitionStartPosRef.current,
+                            cameraTransitionEndPosRef.current,
+                            easeInOut
+                        );
+
+                        // Interpolate camera target
+                        controls.target.lerpVectors(
+                            cameraTransitionStartTargetRef.current,
+                            cameraTransitionEndTargetRef.current,
+                            easeInOut
+                        );
+                    }
+
+                    // Transition complete
+                    if (progress >= 1) {
+                        isCameraTransitioningRef.current = false;
+                    }
+                } else {
+                    // Normal camera following (no transition)
+                    // Player 2 (Yellow) gets a higher angle to avoid building blocking view
+                    const currentPlayerIndex = currentPlayerIndexRef.current;
+                    const isPlayer2 = currentPlayerIndex === 1;
+
+                    const distance = 2.5;
+                    // Player 2 uses a steeper angle (35 degrees) to see over the building
+                    const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
+                    const heightOffset = isPlayer2 ? 0.8 : 0.5; // Higher camera for player 2
+
+                    const offset = new THREE.Vector3(
+                        -distance * Math.cos(angle),
+                        heightOffset,
+                        -distance * Math.sin(angle)
+                    );
+                    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                    camera.position.copy(character.position).add(offset);
+                    controls.target.copy(character.position);
+                }
+            }
+
+
+            // Update animation mixers
+            if (mixers.length > 0) {
+                for (const mixer of mixers) {
+                    mixer.update(deltaTime);
+                }
             }
 
             // ============ PHYSICS UPDATE ============
@@ -1150,17 +1655,20 @@ export default function Game2Page() {
             if (diceMesh.visible) {
                 // If dice should float, keep it at floating position
                 if (diceShouldFloat && character) {
-                    const distance = 1.2;
-                    const angle20 = (20 * Math.PI) / 180;
+                    // Use player-specific angle to match camera
+                    const currentPlayerIndex = currentPlayerIndexRef.current;
+                    const isPlayer2 = currentPlayerIndex === 1;
+                    const distance = 1.4; // Increased distance for better visibility
+                    const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
                     const offset = new THREE.Vector3(
-                        -distance * Math.cos(angle20),
-                        0.24,
-                        -distance * Math.sin(angle20)
+                        -distance * Math.cos(angle),
+                        0.15, // Raised dice position to be fully visible
+                        -distance * Math.sin(angle)
                     );
                     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
                     const floatPosition = character.position.clone().add(offset);
 
-                    diceMesh.position.set(floatPosition.x, floatPosition.y - 0.5, floatPosition.z);
+                    diceMesh.position.set(floatPosition.x, floatPosition.y, floatPosition.z);
 
                     // Rotate faster based on charge power when charging
                     if (isChargingRef.current) {
@@ -1173,7 +1681,7 @@ export default function Game2Page() {
                     }
 
                     // Keep physics body synced with floating position
-                    diceBody.position.set(floatPosition.x, floatPosition.y - 0.5, floatPosition.z);
+                    diceBody.position.set(floatPosition.x, floatPosition.y, floatPosition.z);
                     diceBody.velocity.set(0, 0, 0);
                     diceBody.angularVelocity.set(0, 0, 0);
                 } else {
@@ -1201,11 +1709,11 @@ export default function Game2Page() {
                         // Show dice result immediately when dice finishes tumbling
                         setShowDiceResult(true);
 
-                        // Trigger character movement after a short delay
+                        // Trigger character movement after a shorter delay (reduced from 500ms to 300ms)
                         setTimeout(() => {
                             const event = new CustomEvent('moveCharacter', { detail: { steps: finalValue } });
                             window.dispatchEvent(event);
-                        }, 500);
+                        }, 300);
                     }
                 } else {
                     velocityCheckCount = 0;
@@ -1218,44 +1726,265 @@ export default function Game2Page() {
         }
         animate();
 
+        // Function to swap black model between stand and run
+        const swapBlackModel = (useRun: boolean) => {
+            const player = playersRef.current[0];
+            if (!player.model || !blackStandModelRef.current || !blackRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                blackStandModelRef.current.visible = false;
+                blackRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                blackRunModelRef.current.position.copy(blackStandModelRef.current.position);
+                blackRunModelRef.current.rotation.copy(blackStandModelRef.current.rotation);
+                blackRunModelRef.current.scale.copy(blackStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = blackRunModelRef.current;
+                if (blackRunMixerRef.current) {
+                    player.mixer = blackRunMixerRef.current;
+                    // Ensure run animation is playing smoothly without looping
+                    if (blackRunModelRef.current.animations && blackRunModelRef.current.animations.length > 0) {
+                        const action = blackRunMixerRef.current.clipAction(blackRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity); // Loop repeatedly
+                        action.timeScale = 1.0; // Normal speed
+                        action.reset().play(); // Reset and play smoothly
+                    }
+                }
+                character = blackRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                blackRunModelRef.current.visible = false;
+                blackStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                blackStandModelRef.current.position.copy(blackRunModelRef.current.position);
+                blackStandModelRef.current.rotation.copy(blackRunModelRef.current.rotation);
+                blackStandModelRef.current.scale.copy(blackStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = blackStandModelRef.current;
+                if (blackStandMixerRef.current) {
+                    player.mixer = blackStandMixerRef.current;
+                }
+                character = blackStandModelRef.current;
+            }
+        };
+
+        // Function to swap SM model between stand and run
+        const swapSmModel = (useRun: boolean) => {
+            const player = playersRef.current[2];
+            if (!player.model || !smStandModelRef.current || !smRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                smStandModelRef.current.visible = false;
+                smRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                smRunModelRef.current.position.copy(smStandModelRef.current.position);
+                smRunModelRef.current.rotation.copy(smStandModelRef.current.rotation);
+                smRunModelRef.current.scale.copy(smStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = smRunModelRef.current;
+                if (smRunMixerRef.current) {
+                    player.mixer = smRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (smRunModelRef.current.animations && smRunModelRef.current.animations.length > 0) {
+                        const action = smRunMixerRef.current.clipAction(smRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = smRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                smRunModelRef.current.visible = false;
+                smStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                smStandModelRef.current.position.copy(smRunModelRef.current.position);
+                smStandModelRef.current.rotation.copy(smRunModelRef.current.rotation);
+                smStandModelRef.current.scale.copy(smStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = smStandModelRef.current;
+                if (smStandMixerRef.current) {
+                    player.mixer = smStandMixerRef.current;
+                }
+                character = smStandModelRef.current;
+            }
+        };
+
+        // Function to swap Yellow model between stand and run
+        const swapYellowModel = (useRun: boolean) => {
+            const player = playersRef.current[1];
+            if (!player.model || !yellowStandModelRef.current || !yellowRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                yellowStandModelRef.current.visible = false;
+                yellowRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                yellowRunModelRef.current.position.copy(yellowStandModelRef.current.position);
+                yellowRunModelRef.current.rotation.copy(yellowStandModelRef.current.rotation);
+                yellowRunModelRef.current.scale.copy(yellowStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = yellowRunModelRef.current;
+                if (yellowRunMixerRef.current) {
+                    player.mixer = yellowRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (yellowRunModelRef.current.animations && yellowRunModelRef.current.animations.length > 0) {
+                        const action = yellowRunMixerRef.current.clipAction(yellowRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = yellowRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                yellowRunModelRef.current.visible = false;
+                yellowStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                yellowStandModelRef.current.position.copy(yellowRunModelRef.current.position);
+                yellowStandModelRef.current.rotation.copy(yellowRunModelRef.current.rotation);
+                yellowStandModelRef.current.scale.copy(yellowStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = yellowStandModelRef.current;
+                if (yellowStandMixerRef.current) {
+                    player.mixer = yellowStandMixerRef.current;
+                }
+                character = yellowStandModelRef.current;
+            }
+        };
+
+        // Function to swap Cyan model between stand and run
+        const swapCyanModel = (useRun: boolean) => {
+            const player = playersRef.current[3];
+            if (!player.model || !cyanStandModelRef.current || !cyanRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                cyanStandModelRef.current.visible = false;
+                cyanRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                cyanRunModelRef.current.position.copy(cyanStandModelRef.current.position);
+                cyanRunModelRef.current.rotation.copy(cyanStandModelRef.current.rotation);
+                cyanRunModelRef.current.scale.copy(cyanStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = cyanRunModelRef.current;
+                if (cyanRunMixerRef.current) {
+                    player.mixer = cyanRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (cyanRunModelRef.current.animations && cyanRunModelRef.current.animations.length > 0) {
+                        const action = cyanRunMixerRef.current.clipAction(cyanRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = cyanRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                cyanRunModelRef.current.visible = false;
+                cyanStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                cyanStandModelRef.current.position.copy(cyanRunModelRef.current.position);
+                cyanStandModelRef.current.rotation.copy(cyanRunModelRef.current.rotation);
+                cyanStandModelRef.current.scale.copy(cyanStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = cyanStandModelRef.current;
+                if (cyanStandMixerRef.current) {
+                    player.mixer = cyanStandMixerRef.current;
+                }
+                character = cyanStandModelRef.current;
+            }
+        };
+
+
+
         // Handle character movement
         const moveCharacter = async (event: Event) => {
             const customEvent = event as CustomEvent<{ steps: number }>;
             const steps = customEvent.detail.steps;
 
-            if (!character) return;
+            const currentPlayerIndex = currentPlayerIndexRef.current;
+            const player = playersRef.current[currentPlayerIndex];
+
+            // If model isn't loaded yet, skip
+            if (!player.model) return;
+
+            // Switch models to run animation when movement starts
+            if (currentPlayerIndex === 0) {
+                swapBlackModel(true);
+            } else if (currentPlayerIndex === 1) {
+                swapYellowModel(true);
+            } else if (currentPlayerIndex === 2) {
+                swapSmModel(true);
+            } else if (currentPlayerIndex === 3) {
+                swapCyanModel(true);
+            }
+
+            // Update global 'character' reference for camera focus
+            character = player.model as THREE.Group;
 
             for (let i = 0; i < steps; i++) {
-                const nextPosition = (currentPosition + 1) % tilePositions.length;
+                const nextPosition = (player.currentPosition + 1) % tilePositions.length;
                 const targetPos = tilePositions[nextPosition];
 
                 // Check if the next position is a corner (need to rotate when arriving at corners 8, 16, 24, 0)
                 const corners = [0, 8, 16, 24];
                 // Don't rotate if it's the very first move (starting at position 0 and moving to 1)
                 // Special case: if we're at position 31 and moving to 0, we DO need to rotate
-                const isCompletingLoop = currentPosition === 31 && nextPosition === 0;
-                const needsRotation = corners.includes(nextPosition) && (hasStarted || isCompletingLoop);
+                const isCompletingLoop = player.currentPosition === 31 && nextPosition === 0;
+
+                // For logic simplicity, let's assume if we hit a corner we rotate
+                // But we need to check if we are *entering* a new side.
+                // Corners are indices 8, 16, 24, 0.
+                const needsRotation = corners.includes(nextPosition);
 
                 await new Promise<void>((resolve) => {
-                    const startPos = character!.position.clone();
-                    const endPos = new THREE.Vector3(targetPos.x, 11, targetPos.z);
-                    const startRot = character!.rotation.y;
-                    const targetRot = needsRotation ? startRot + Math.PI / 2 : startRot;
-                    const duration = 300;
+                    const startPos = player.model!.position.clone();
+                    const endPos = new THREE.Vector3(targetPos.x, 10.6, targetPos.z);
+                    const startRot = player.model!.rotation.y;
+
+                    // Specific rotation logic:
+                    // 0 -> 0 rad
+                    // 8 -> -PI/2
+                    // 16 -> -PI
+                    // 24 -> -3PI/2 (or PI/2)
+                    // Calculate rotation for target position - face the direction they'll be walking
+                    let targetRot = 0;
+                    if (nextPosition === 0) targetRot = 0; // Black model at start - facing forward
+                    else if (nextPosition === 8) targetRot = Math.PI / 2; // Facing forward along path
+                    else if (nextPosition === 16) targetRot = Math.PI; // SM model at corner - facing forward (down)
+                    else if (nextPosition === 24) targetRot = -Math.PI / 2; // Facing forward along path
+                    else if (nextPosition > 0 && nextPosition < 8) targetRot = 0; // Left column - facing forward (up)
+                    else if (nextPosition > 8 && nextPosition < 16) targetRot = Math.PI / 2; // Bottom row - facing forward (right)
+                    else if (nextPosition > 16 && nextPosition < 24) targetRot = Math.PI; // Right column - facing forward (down)
+                    else if (nextPosition > 24) targetRot = -Math.PI / 2; // Top row - facing forward (left)
+
+                    // Ensure shortest path rotation (avoid spinning 270 degrees)
+                    let deltaRot = targetRot - startRot;
+                    // Normalize delta to [-PI, PI]
+                    while (deltaRot > Math.PI) deltaRot -= 2 * Math.PI;
+                    while (deltaRot < -Math.PI) deltaRot += 2 * Math.PI;
+                    // Adjust targetRot to be the closest equivalent angle
+                    targetRot = startRot + deltaRot;
+
+                    // Player-specific movement speeds: Player 1 (Yellow) moves faster
+                    const duration = currentPlayerIndex === 1 ? 600 : 800; // Player 1 moves faster (600ms vs 800ms)
                     const startTime = Date.now();
 
                     function animateMove() {
                         const elapsed = Date.now() - startTime;
                         const progress = Math.min(elapsed / duration, 1);
 
-                        character!.position.lerpVectors(startPos, endPos, progress);
-                        character!.rotation.y = startRot + (targetRot - startRot) * progress;
+                        player.model!.position.lerpVectors(startPos, endPos, progress);
+                        player.model!.rotation.y = startRot + (targetRot - startRot) * progress;
 
                         if (progress < 1) {
                             requestAnimationFrame(animateMove);
                         } else {
-                            currentRotation = targetRot;
-                            currentPosition = nextPosition;
+                            player.rotation = targetRot;
+                            player.currentPosition = nextPosition;
                             currentTileRef.current = nextPosition;
                             hasStarted = true;
                             resolve();
@@ -1265,20 +1994,29 @@ export default function Game2Page() {
                 });
             }
 
-            setIsMoving(false);
+            // Switch models back to stand animation when movement ends
+            if (currentPlayerIndex === 0) {
+                swapBlackModel(false);
+            } else if (currentPlayerIndex === 1) {
+                swapYellowModel(false);
+            } else if (currentPlayerIndex === 2) {
+                swapSmModel(false);
+            } else if (currentPlayerIndex === 3) {
+                swapCyanModel(false);
+            }
 
-            // Hide dice result after movement completes
+            // End of turn logic
+            setIsMoving(false);
             setShowDiceResult(false);
 
-            // Hide the 3D dice when movement completes
             if (diceMeshRef.current) {
                 diceMeshRef.current.visible = false;
             }
 
-            // Return dice to floating state after character finishes moving
             diceShouldFloat = true;
 
-            // Show tile overlay after movement completes
+            // Don't switch players here - wait for button click
+            // The overlay will show, and when player clicks a button, smooth transition will happen
             setTimeout(() => {
                 const randomPrice = Math.random() > 0.5 ? 20 : 10;
                 setCurrentTilePrice(randomPrice as 10 | 20);
@@ -1293,13 +2031,16 @@ export default function Game2Page() {
             const customEvent = event as CustomEvent<{ power: number }>;
             const power = customEvent.detail.power; // 0-100
 
-            // Calculate dice spawn position based on character position (camera view at 20 degrees)
-            const distance = 1.2;
-            const angle20 = (20 * Math.PI) / 180;
+            // Calculate dice spawn position based on character position
+            // Use player-specific angle to match camera
+            const currentPlayerIndex = currentPlayerIndexRef.current;
+            const isPlayer2 = currentPlayerIndex === 1;
+            const distance = 1.4; // Increased distance for better visibility
+            const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
             const spawnOffset = new THREE.Vector3(
-                -distance * Math.cos(angle20),
-                0.24,
-                -distance * Math.sin(angle20)
+                -distance * Math.cos(angle),
+                0.2, // Raised spawn position to be fully visible
+                -distance * Math.sin(angle)
             );
 
             // Apply character rotation to offset
@@ -1337,14 +2078,22 @@ export default function Game2Page() {
             );
             diceBody.applyImpulse(impulse);
 
-            // Apply random torque for spinning
-            const torqueStrength = 15 + powerMultiplier * 20; // 15 to 35
+            // Apply random torque for spinning (increased for faster, smoother spinning)
+            const torqueStrength = 30 + powerMultiplier * 40; // Increased to 30-70 for faster spin
             const torque = new CANNON.Vec3(
                 (Math.random() - 0.5) * torqueStrength,
                 (Math.random() - 0.5) * torqueStrength,
                 (Math.random() - 0.5) * torqueStrength
             );
             diceBody.applyTorque(torque);
+
+            // Apply initial angular velocity for smoother, faster spinning start
+            const angularVelStrength = 12 + powerMultiplier * 18; // 12-30 for smooth initial spin
+            diceBody.angularVelocity.set(
+                (Math.random() - 0.5) * angularVelStrength,
+                (Math.random() - 0.5) * angularVelStrength,
+                (Math.random() - 0.5) * angularVelStrength
+            );
 
             // Enable physics and disable floating
             diceShouldFloat = false;
@@ -1353,6 +2102,107 @@ export default function Game2Page() {
         };
 
         window.addEventListener('rollDice', rollDiceHandler);
+
+        // Helper function to calculate rotation based on tile position
+        const getRotationForPosition = (position: number): number => {
+            const corners = [0, 8, 16, 24];
+            if (position === 0) return 0;
+            if (position === 8) return -Math.PI / 2;
+            if (position === 16) return -Math.PI;
+            if (position === 24) return -3 * Math.PI / 2;
+
+            // For positions between corners, determine which side they're on
+            if (position > 0 && position < 8) return 0; // Top side
+            if (position > 8 && position < 16) return -Math.PI / 2; // Right side
+            if (position > 16 && position < 24) return -Math.PI; // Bottom side
+            if (position > 24) return -3 * Math.PI / 2; // Left side
+
+            return 0;
+        };
+
+        // Handle smooth player switch
+        const switchToNextPlayer = () => {
+            const currentPlayerIndex = currentPlayerIndexRef.current;
+            const currentPlayer = playersRef.current[currentPlayerIndex];
+            const nextPlayerIndex = (currentPlayerIndex + 1) % 4;
+            const nextPlayer = playersRef.current[nextPlayerIndex];
+
+            // Check if both players have models loaded
+            if (!currentPlayer.model || !nextPlayer.model) {
+                // If models aren't ready, just switch immediately
+                currentPlayerIndexRef.current = nextPlayerIndex;
+                character = nextPlayer.model as THREE.Group;
+                return;
+            }
+
+            // Position next player at their current tile position on the board
+            positionPlayerAtTile(nextPlayer, nextPlayer.currentPosition);
+            const nextPlayerRotation = nextPlayer.rotation;
+
+            // Use actual current camera position and target (more accurate)
+            const currentCameraPos = camera.position.clone();
+            const currentTarget = controls.target.clone();
+
+            // Calculate next player camera position and target
+            // Player 2 (Yellow) gets a higher angle to avoid building blocking view
+            const isPlayer2 = nextPlayerIndex === 1;
+            const distance = 2.5;
+            // Player 2 uses a steeper angle (35 degrees) to see over the building
+            const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
+            const heightOffset = isPlayer2 ? 0.8 : 0.5; // Higher camera for player 2
+
+            const nextOffset = new THREE.Vector3(
+                -distance * Math.cos(angle),
+                heightOffset,
+                -distance * Math.sin(angle)
+            );
+            nextOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), nextPlayerRotation);
+            const nextCameraPos = nextPlayer.model.position.clone().add(nextOffset);
+            const nextTarget = nextPlayer.model.position.clone();
+
+            // Store transition start values
+            cameraTransitionStartPosRef.current = currentCameraPos.clone();
+            cameraTransitionStartTargetRef.current = currentTarget.clone();
+            cameraTransitionEndPosRef.current = nextCameraPos.clone();
+            cameraTransitionEndTargetRef.current = nextTarget.clone();
+
+            // Start transition
+            isCameraTransitioningRef.current = true;
+            cameraTransitionStartTimeRef.current = Date.now() * 0.001;
+
+            // Switch to next player after transition completes
+            setTimeout(() => {
+                currentPlayerIndexRef.current = nextPlayerIndex;
+                character = nextPlayer.model as THREE.Group;
+
+                // Show dice in front of the new player and make it ready to roll
+                if (diceMeshRef.current && nextPlayer.model) {
+                    // Use player-specific angle to match camera
+                    const isPlayer2 = nextPlayerIndex === 1;
+                    const distance = 0.8;
+                    const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
+                    const offset = new THREE.Vector3(
+                        -distance * Math.cos(angle),
+                        0.15, // Raised dice position to be fully visible
+                        -distance * Math.sin(angle)
+                    );
+                    // Use the updated rotation
+                    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), nextPlayer.rotation);
+                    const dicePosition = nextPlayer.model.position.clone().add(offset);
+
+                    diceBody.position.set(dicePosition.x, dicePosition.y, dicePosition.z);
+                    diceMeshRef.current.visible = true;
+                    diceShouldFloat = true;
+                }
+
+                // Reset dice value and state for next player
+                setDiceValue(null);
+                setShowDiceResult(false);
+                setIsMoving(false);
+            }, 1500); // Match transition duration
+        };
+
+        window.addEventListener('switchToNextPlayer', switchToNextPlayer);
 
         // Handle window resize
         const handleResize = () => {
@@ -1475,7 +2325,7 @@ export default function Game2Page() {
                 }
 
                 // Position paper (laying flat initially)
-                paperMesh.position.set(paperX, 10.8, paperZ);
+                paperMesh.position.set(paperX, 11, paperZ);
                 paperMesh.rotation.x = -Math.PI / 2; // Lay flat initially
                 paperMesh.rotation.y = rotationY;
                 paperMesh.castShadow = true;
@@ -1504,7 +2354,7 @@ export default function Game2Page() {
                         }
                     }
                     animatePaper();
-                }, 300); // 300ms delay before animation starts
+                }, 800); // 800ms delay before animation starts (wait for overlay to close)
             });
         };
 
@@ -1522,6 +2372,7 @@ export default function Game2Page() {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('moveCharacter', moveCharacter);
             window.removeEventListener('rollDice', rollDiceHandler);
+            window.removeEventListener('switchToNextPlayer', switchToNextPlayer);
             window.removeEventListener('placePaper', handlePlacePaper);
             renderer.dispose();
             controls.dispose();
@@ -1530,7 +2381,7 @@ export default function Game2Page() {
 
     // Separate scene for house display in overlay
     useEffect(() => {
-        if (!houseCanvasRef.current || !houseContainerRef.current || !showTileOverlay) return;
+        if (!houseCanvasRef.current || !houseContainerRef.current || !showTileOverlay || rightViewMode !== 'model') return;
 
         const scene = new THREE.Scene();
         // Transparent background - only show the house
@@ -1629,7 +2480,56 @@ export default function Game2Page() {
             cancelAnimationFrame(animationFrameId);
             renderer.dispose();
         };
-    }, [showTileOverlay]);
+    }, [showTileOverlay, rightViewMode]);
+
+    // Helper function to handle action selection (END TURN, PAY, TRADE, BANKRUPT)
+    const handleActionSelection = () => {
+        // Hide dice immediately when action is selected
+        if (diceMeshRef.current) {
+            diceMeshRef.current.visible = false;
+        }
+        setShowTileOverlay(false);
+        setShowDiceResult(false);
+        // Smoothly switch to next player
+        setTimeout(() => {
+            const event = new CustomEvent('switchToNextPlayer');
+            window.dispatchEvent(event);
+        }, 300);
+    };
+
+    // Helper function to handle PAY action - places paper on current tile
+    const handlePayAction = () => {
+        // Hide dice immediately when action is selected
+        if (diceMeshRef.current) {
+            diceMeshRef.current.visible = false;
+        }
+
+        // Get current player info
+        const currentPlayerIndex = currentPlayerIndexRef.current;
+        const currentTile = currentTileRef.current;
+
+        // Get player image from the players array (first 4 are the game players)
+        const playerImage = players[currentPlayerIndex]?.image || '/game2/greenguy.glb';
+
+        // Close overlay immediately
+        setShowTileOverlay(false);
+        setShowDiceResult(false);
+
+        // Dispatch event to place paper on current tile
+        const event = new CustomEvent('placePaper', {
+            detail: {
+                tileIndex: currentTile,
+                playerImage: playerImage
+            }
+        });
+        window.dispatchEvent(event);
+
+        // Switch to next player after paper animation completes
+        setTimeout(() => {
+            const switchEvent = new CustomEvent('switchToNextPlayer');
+            window.dispatchEvent(switchEvent);
+        }, 1200); // 800ms delay + 400ms animation duration
+    };
 
     return (
         <>
@@ -1720,144 +2620,144 @@ export default function Game2Page() {
                     </h1>
                 </div>
 
-            {/* Background blur layer */}
-            <div className="absolute inset-0" style={{
-                background: 'inherit',
-                filter: 'blur(1px)',
-                zIndex: 0
-            }}></div>
+                {/* Background blur layer */}
+                <div className="absolute inset-0" style={{
+                    background: 'inherit',
+                    filter: 'blur(1px)',
+                    zIndex: 0
+                }}></div>
 
-            <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
+                <canvas ref={canvasRef} className="absolute inset-0" style={{ zIndex: 0 }} />
 
-            {/* Player Board Overlay - Top Left */}
-            {introComplete && (
-                <div className="absolute top-4 left-4 z-10">
-                    <style jsx>{`
+                {/* Player Board Overlay - Top Left */}
+                {introComplete && (
+                    <div className="absolute top-4 left-4 z-10">
+                        <style jsx>{`
                         @keyframes pulse-border {
                             0%, 100% { opacity: 0.5; }
                             50% { opacity: 1; }
                         }
                     `}</style>
-                    <div className="relative bg-slate-900/70 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
-                        {/* Subtle grid pattern */}
-                        <div className="absolute inset-0 opacity-5" style={{
-                            backgroundImage: `
+                        <div className="relative bg-slate-900/70 backdrop-blur-lg rounded-xl p-3 border border-cyan-500/40 shadow-2xl overflow-hidden" style={{ maxWidth: '240px' }}>
+                            {/* Subtle grid pattern */}
+                            <div className="absolute inset-0 opacity-5" style={{
+                                backgroundImage: `
                                 linear-gradient(90deg, rgba(0, 255, 255, 0.3) 1px, transparent 1px),
                                 linear-gradient(rgba(0, 255, 255, 0.3) 1px, transparent 1px)
                             `,
-                            backgroundSize: '8px 8px'
-                        }} />
+                                backgroundSize: '8px 8px'
+                            }} />
 
-                        {/* Corner accents */}
-                        <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/60 rounded-tl" />
-                        <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/60 rounded-tr" />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/60 rounded-bl" />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/60 rounded-br" />
+                            {/* Corner accents */}
+                            <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-cyan-400/60 rounded-tl" />
+                            <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-cyan-400/60 rounded-tr" />
+                            <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-cyan-400/60 rounded-bl" />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-cyan-400/60 rounded-br" />
 
-                        {players.map((player, index) => (
-                            <div key={player.id} className="relative">
-                                <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
-                                    {/* Player Image */}
-                                    <div className="relative w-12 h-12 flex-shrink-0">
-                                        {index === 0 && (
-                                            <>
-                                                {/* Rotating dashed ring for active player */}
-                                                <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
-                                                {/* Solid border */}
-                                                <div className="absolute -inset-0.5 rounded-lg border border-cyan-400/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
-                                            </>
-                                        )}
-                                        <div className="w-full h-full rounded-lg overflow-hidden bg-slate-800">
-                                            <img
-                                                src={player.image}
-                                                alt={player.name}
-                                                className="w-full h-full object-cover"
-                                            />
+                            {players.map((player, index) => (
+                                <div key={player.id} className="relative">
+                                    <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
+                                        {/* Player Image */}
+                                        <div className="relative w-12 h-12 flex-shrink-0">
+                                            {index === 0 && (
+                                                <>
+                                                    {/* Rotating dashed ring for active player */}
+                                                    <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
+                                                    {/* Solid border */}
+                                                    <div className="absolute -inset-0.5 rounded-lg border border-cyan-400/50" style={{ animation: 'pulse-border 2s ease-in-out infinite' }} />
+                                                </>
+                                            )}
+                                            <div className="w-full h-full rounded-lg overflow-hidden bg-slate-800">
+                                                <img
+                                                    src={player.image}
+                                                    alt={player.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
                                         </div>
+
+                                        {/* Player Name and Balance */}
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
+                                                style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
+                                                {player.name}
+                                            </span>
+                                            <span className="text-emerald-400 text-xs font-medium tracking-wider"
+                                                style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                                                ⬡ {player.balance.toLocaleString()}
+                                            </span>
+                                        </div>
+
+                                        {/* Active indicator */}
+                                        {index === 0 && (
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 10px rgba(0, 255, 255, 0.9)' }} />
+                                                <div className="text-[8px] text-cyan-400 font-mono tracking-wider">ACT</div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Player Name and Balance */}
-                                    <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
-                                              style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
-                                            {player.name}
-                                        </span>
-                                        <span className="text-emerald-400 text-xs font-medium tracking-wider"
-                                              style={{ fontFamily: '"JetBrains Mono", monospace' }}>
-                                            ⬡ {player.balance.toLocaleString()}
-                                        </span>
-                                    </div>
-
-                                    {/* Active indicator */}
-                                    {index === 0 && (
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="w-2 h-2 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 10px rgba(0, 255, 255, 0.9)' }} />
-                                            <div className="text-[8px] text-cyan-400 font-mono tracking-wider">ACT</div>
+                                    {/* Divider */}
+                                    {index < players.length - 1 && (
+                                        <div className="relative h-px my-2 mx-1">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
+                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
                                         </div>
                                     )}
                                 </div>
-
-                                {/* Divider */}
-                                {index < players.length - 1 && (
-                                    <div className="relative h-px my-2 mx-1">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
-                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-cyan-400/60 rounded-full" />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Lightning arc canvas */}
-            <canvas
-                ref={lightningCanvasRef}
-                className="absolute inset-0 pointer-events-none"
-                style={{ zIndex: 15 }}
-            />
-
-            {/* Dice Roll Button */}
-            {introComplete && (
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
-                {showDiceResult && diceValue !== null && (
-                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
-                        <canvas
-                            ref={diceResultCanvasRef}
-                            className="w-20 h-20"
-                        />
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                <button
-                    ref={buttonRef}
-                    onMouseDown={startCharging}
-                    onMouseUp={releaseCharging}
-                    onMouseLeave={releaseCharging}
-                    onTouchStart={startCharging}
-                    onTouchEnd={releaseCharging}
-                    disabled={isMoving}
-                    className="relative disabled:opacity-50 select-none"
-                    style={{
-                        background: 'rgba(10, 10, 26, 0.8)',
-                        border: '2px solid #00ffff',
-                        boxShadow: isCharging ? '0 0 15px rgba(0, 255, 255, 0.5)' : 'none'
-                    }}
-                >
-                    <span className="font-bold py-3 px-6 text-lg block"
-                          style={{
-                              color: isCharging ? '#00ffff' : '#00ffcc',
-                              fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                              letterSpacing: '0.05em'
-                          }}
-                    >
-                        {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
-                    </span>
-                </button>
+                {/* Lightning arc canvas */}
+                <canvas
+                    ref={lightningCanvasRef}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ zIndex: 15 }}
+                />
 
-                {/* Add custom styles */}
-                <style jsx>{`
+                {/* Dice Roll Button */}
+                {introComplete && (
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-4 z-10">
+                        {showDiceResult && diceValue !== null && (
+                            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-2 shadow-lg">
+                                <canvas
+                                    ref={diceResultCanvasRef}
+                                    className="w-20 h-20"
+                                />
+                            </div>
+                        )}
+
+                        <button
+                            ref={buttonRef}
+                            onMouseDown={startCharging}
+                            onMouseUp={releaseCharging}
+                            onMouseLeave={releaseCharging}
+                            onTouchStart={startCharging}
+                            onTouchEnd={releaseCharging}
+                            disabled={isMoving}
+                            className="relative disabled:opacity-50 select-none"
+                            style={{
+                                background: 'rgba(10, 10, 26, 0.8)',
+                                border: '2px solid #00ffff',
+                                boxShadow: isCharging ? '0 0 15px rgba(0, 255, 255, 0.5)' : 'none'
+                            }}
+                        >
+                            <span className="font-bold py-3 px-6 text-lg block"
+                                style={{
+                                    color: isCharging ? '#00ffff' : '#00ffcc',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    letterSpacing: '0.05em'
+                                }}
+                            >
+                                {isMoving ? '[MOVING...]' : isCharging ? '[RELEASE TO LAUNCH]' : '[HOLD & ROLL]'}
+                            </span>
+                        </button>
+
+                        {/* Add custom styles */}
+                        <style jsx>{`
                     @keyframes scan {
                         0% { transform: translateY(-100%); }
                         100% { transform: translateY(100%); }
@@ -1874,42 +2774,39 @@ export default function Game2Page() {
                         text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
                     }
                 `}</style>
-            </div>
-            )}
+                    </div>
+                )}
 
-            {/* Tile Overlay with split-screen layout */}
-            {showTileOverlay && (
-                <div className="absolute inset-0 flex z-40">
-                    {/* Unified blur layer behind everything */}
-                    <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
+                {/* Tile Overlay with split-screen layout */}
+                {showTileOverlay && (
+                    <div className="absolute inset-0 flex z-40">
+                        {/* Unified blur layer behind everything */}
+                        <div className="absolute inset-0 backdrop-blur-md bg-black/30 -z-10"></div>
 
-                    {/* Left side - buttons (40%) */}
-                    <div className="w-[40%] relative flex flex-col justify-center items-end gap-4 p-8">
-                        <style jsx>{`
+                        {/* Left side - buttons (40%) */}
+                        <div className="w-[40%] relative flex flex-col justify-center items-end gap-4 p-8">
+                            <style jsx>{`
                             @keyframes pulse-glow {
                                 0%, 100% { opacity: 0.5; }
                                 50% { opacity: 1; }
                             }
                         `}</style>
-                        {/* Option buttons */}
-                        <button
-                            onClick={() => {
-                                setShowTileOverlay(false);
-                                setShowDiceResult(false);
-                            }}
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #00ffff',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#00ffcc',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>✕</span>
-                            <span>END TURN</span>
-                        </button>
+                            {/* Option buttons */}
+                            <button
+                                onClick={handleActionSelection}
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #00ffff',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#00ffcc',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>✕</span>
+                                <span>END TURN</span>
+                            </button>
 
                         <button
                             onClick={() => {
@@ -2071,47 +2968,104 @@ export default function Game2Page() {
                             </div>
                         )}
 
-                        <button
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #a855f7',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#d8b4fe',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>⇄</span>
-                            <span>TRADE</span>
-                        </button>
+                            <button
+                                onClick={handleActionSelection}
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #a855f7',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#d8b4fe',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>⇄</span>
+                                <span>TRADE</span>
+                            </button>
 
-                        <button
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #ef4444',
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#f87171',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.5rem' }}>⚠</span>
-                            <span>BANKRUPT</span>
-                        </button>
-                    </div>
+                            <button
+                                onClick={handleActionSelection}
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: '2px solid #ef4444',
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#f87171',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <span style={{ fontSize: '1.5rem' }}>⚠</span>
+                                <span>BANKRUPT</span>
+                            </button>
+                        </div>
 
-                    {/* Right side - house 3D scene (60%) */}
-                    <div className="w-[60%] relative">
-                        {/* House 3D Scene */}
-                        <div ref={houseContainerRef} className="w-full h-full relative">
-                            <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                        {/* Right side - house 3D scene (60%) */}
+                        <div className="w-[60%] relative">
+                            {/* Toggle buttons - vertically centered on right */}
+                            <div className="absolute top-1/2 right-4 -translate-y-1/2 z-10 flex flex-col gap-2">
+                                <button
+                                    onClick={() => setRightViewMode('model')}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                        rightViewMode === 'model'
+                                            ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/50 scale-110'
+                                            : 'bg-black/50 text-cyan-400 border border-cyan-500/50 hover:bg-black/70'
+                                    }`}
+                                    title="View 3D Model"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M2 20h20"></path>
+                                        <path d="m5 16 4-8 4 6 5-10 4 8"></path>
+                                        <path d="M3.5 12h17"></path>
+                                        <path d="M7 8v8"></path>
+                                        <path d="M12 10v4"></path>
+                                        <path d="M17 8v8"></path>
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setRightViewMode('nft')}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                        rightViewMode === 'nft'
+                                            ? 'bg-purple-500 text-black shadow-lg shadow-purple-500/50 scale-110'
+                                            : 'bg-black/50 text-purple-400 border border-purple-500/50 hover:bg-black/70'
+                                    }`}
+                                    title="View NFT Card"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Content - conditionally render model or NFT card */}
+                            {/* House 3D Scene - always rendered but visibility controlled */}
+                            <div ref={houseContainerRef} className="w-full h-full relative" style={{ display: rightViewMode === 'model' ? 'block' : 'none' }}>
+                                <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                            </div>
+
+                            {/* NFT Card Display - visibility controlled */}
+                            <div className="w-full h-full flex items-center justify-center p-8" style={{ display: rightViewMode === 'nft' ? 'flex' : 'none' }}>
+                                <div className="w-full max-w-md" style={{ transform: 'translate(10%, 10%)' }}>
+                                    <NFTCard
+                                        id={1}
+                                        name="Luxury Villa"
+                                        image="/nft/1.png"
+                                        rarity="LEGENDARY"
+                                        price="1,500,000"
+                                        description="A stunning luxury villa with panoramic views, featuring modern architecture, premium finishes, and state-of-the-art amenities. Perfect for those seeking the ultimate in comfort and style."
+                                        color="#00ffff"
+                                        glowColor="#00ffff"
+                                        contractAddress="0x1234567890abcdef1234567890abcdef12345678"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
         </>
     );
 }
