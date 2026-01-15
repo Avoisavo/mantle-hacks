@@ -229,6 +229,7 @@ export default function Game2Page() {
         { id: 3, name: 'Chicken', model: null, currentPosition: 24, mixer: null, rotation: 0 },
     ]);
     const currentPlayerIndexRef = useRef(0);
+    const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
     const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
     const currentTileRef = useRef<number>(0);
     const [rightViewMode, setRightViewMode] = useState<'model' | 'nft'>('model');
@@ -261,6 +262,33 @@ export default function Game2Page() {
             isSessionActive: !!session
         });
     }, [connectedWallet, chainId, session]);
+
+    // Listen for player switch events to update UI
+    useEffect(() => {
+        const handlePlayerSwitch = (event: Event) => {
+            const customEvent = event as CustomEvent<{ playerIndex: number }>;
+            if (customEvent.detail && customEvent.detail.playerIndex !== undefined) {
+                setCurrentPlayerIndex(customEvent.detail.playerIndex);
+            } else {
+                // If no playerIndex in event, use the ref value
+                setCurrentPlayerIndex(currentPlayerIndexRef.current);
+            }
+        };
+
+        const handleSwitchToNextPlayer = () => {
+            // Calculate next player index
+            const nextPlayerIndex = (currentPlayerIndexRef.current + 1) % 4;
+            setCurrentPlayerIndex(nextPlayerIndex);
+        };
+
+        window.addEventListener('playerSwitched', handlePlayerSwitch);
+        window.addEventListener('switchToNextPlayer', handleSwitchToNextPlayer);
+
+        return () => {
+            window.removeEventListener('playerSwitched', handlePlayerSwitch);
+            window.removeEventListener('switchToNextPlayer', handleSwitchToNextPlayer);
+        };
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -296,9 +324,9 @@ export default function Game2Page() {
 
     // Player state
     const [players, setPlayers] = useState<Player[]>([
-        { id: 1, name: 'You', balance: 1500, image: '/game2/me.png' },
+        { id: 1, name: 'Player 1', balance: 1500, image: '/game2/me.png' },
         { id: 2, name: 'Player 2', balance: 1500, image: '/game2/player1.png' },
-        { id: 3, name: 'Player 3', balance: 1500, image: '/game2/player2.png' },
+        { id: 3, name: 'Me', balance: 1500, image: '/game2/player2.png' },
         { id: 4, name: 'Player 4', balance: 1500, image: '/game2/player3.png' }
     ]);
 
@@ -2537,54 +2565,6 @@ export default function Game2Page() {
             <div ref={containerRef} className="h-screen w-full overflow-hidden relative" style={{
                 background: 'linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%)'
             }}>
-                {/* Account Display - Top Right */}
-                {isLoggedIn && introComplete && (
-                    <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
-                        {/* User Account Button */}
-                        <div className="relative" ref={accountMenuRef}>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowAccountMenu(!showAccountMenu);
-                                }}
-                                className="flex items-center gap-3 bg-black/40 backdrop-blur-xl border border-pink-500/40 rounded-full px-4 py-2 hover:border-pink-400/60 transition-all"
-                            >
-                                <div className="w-8 h-8 rounded-full border-2 border-pink-400 flex items-center justify-center bg-pink-500/10">
-                                    {displayImage ? (
-                                        <img
-                                            src={displayImage}
-                                            alt={displayName || "User"}
-                                            className="w-full h-full rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <AvatarIcon name="default" size={16} className="text-pink-400" />
-                                    )}
-                                </div>
-                                <span className="text-white font-medium text-sm">{displayName}</span>
-                            </button>
-
-                            {/* Account Dropdown Menu */}
-                            {showAccountMenu && (
-                                <div className="absolute right-0 mt-2 w-48 bg-black/80 backdrop-blur-xl border border-pink-500/40 rounded-2xl overflow-hidden">
-                                    <div className="p-3 border-b border-pink-500/20">
-                                        <p className="text-purple-300/60 text-xs">Signed in as</p>
-                                        <p className="text-white text-sm font-medium truncate">{displayName}</p>
-                                    </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleLogout();
-                                        }}
-                                        className="w-full px-4 py-3 flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
-                                    >
-                                        <LogOut size={16} />
-                                        <span className="text-sm font-medium">Sign Out</span>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 {/* Loading text */}
                 <div id="loading" className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5 }}>
@@ -2653,10 +2633,10 @@ export default function Game2Page() {
 
                             {players.map((player, index) => (
                                 <div key={player.id} className="relative">
-                                    <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === 0 ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
+                                    <div className={`flex items-center gap-3 py-2.5 px-2 rounded-lg transition-all duration-300 ${index === currentPlayerIndex ? 'bg-cyan-500/15 border border-cyan-500/30' : ''}`}>
                                         {/* Player Image */}
                                         <div className="relative w-12 h-12 flex-shrink-0">
-                                            {index === 0 && (
+                                            {index === currentPlayerIndex && (
                                                 <>
                                                     {/* Rotating dashed ring for active player */}
                                                     <div className="absolute inset-0 rounded-lg border border-dashed border-cyan-500/40 animate-spin" style={{ animationDuration: '8s' }} />
@@ -2676,7 +2656,7 @@ export default function Game2Page() {
                                         {/* Player Name and Balance */}
                                         <div className="flex flex-col min-w-0 flex-1">
                                             <span className="text-cyan-300 text-sm font-bold tracking-wide uppercase"
-                                                style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === 0 ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
+                                                style={{ fontFamily: '"Rajdhani", "Orbitron", sans-serif', textShadow: index === currentPlayerIndex ? '0 0 10px rgba(0, 255, 255, 0.5)' : 'none' }}>
                                                 {player.name}
                                             </span>
                                             <span className="text-emerald-400 text-xs font-medium tracking-wider"
@@ -2927,16 +2907,23 @@ export default function Game2Page() {
 
                                                     // 3. Game logic
                                                     console.log("Triggering game event: placePaper");
+                                                    const currentPlayerIndex = currentPlayerIndexRef.current;
                                                     const event = new CustomEvent('placePaper', {
                                                         detail: {
                                                             tileIndex: currentTileRef.current,
-                                                            playerImage: players[0].image
+                                                            playerImage: players[currentPlayerIndex].image
                                                         }
                                                     });
                                                     window.dispatchEvent(event);
                                                     setShowTileOverlay(false);
                                                     setShowDiceResult(false);
                                                     alert(`Payment of ${currentTilePrice} TOWN successful! Asset acquired.`);
+
+                                                    // Switch to next player after paper animation completes
+                                                    setTimeout(() => {
+                                                        const switchEvent = new CustomEvent('switchToNextPlayer');
+                                                        window.dispatchEvent(switchEvent);
+                                                    }, 1200); // 800ms delay + 400ms animation duration
                                                 } catch (error) {
                                                     console.error("Payment flow failed:", error);
                                                     alert("Transaction failed: " + (error as any).message);
@@ -2965,7 +2952,8 @@ export default function Game2Page() {
                             </div>
                         )}
 
-                            <button
+                            {/* Hidden - TRADE button */}
+                            {/* <button
                                 onClick={handleActionSelection}
                                 className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
                                 style={{
@@ -2979,9 +2967,10 @@ export default function Game2Page() {
                             >
                                 <span style={{ fontSize: '1.5rem' }}>⇄</span>
                                 <span>TRADE</span>
-                            </button>
+                            </button> */}
 
-                            <button
+                            {/* Hidden - BANKRUPT button */}
+                            {/* <button
                                 onClick={handleActionSelection}
                                 className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
                                 style={{
@@ -2995,7 +2984,7 @@ export default function Game2Page() {
                             >
                                 <span style={{ fontSize: '1.5rem' }}>⚠</span>
                                 <span>BANKRUPT</span>
-                            </button>
+                            </button> */}
                         </div>
 
                         {/* Right side - house 3D scene (60%) */}
