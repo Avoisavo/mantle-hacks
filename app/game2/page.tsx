@@ -145,6 +145,9 @@ export default function Game2Page() {
     const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
+    const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const currentTileRef = useRef<number>(0);
 
     // Account state
     const { data: session } = useSession();
@@ -470,6 +473,7 @@ export default function Game2Page() {
 
         // Scene setup
         const scene = new THREE.Scene();
+        sceneRef.current = scene;
         // Darker starry night background with gradient effect and blur
         const canvas = document.createElement('canvas');
         canvas.width = 2;
@@ -947,6 +951,7 @@ export default function Game2Page() {
         tilePositions.push(...leftCol, ...bottomRow, ...rightCol, ...topRow);
 
         let currentPosition = 0;
+        currentTileRef.current = 0;
         let currentRotation = 0;
         let hasStarted = false;
 
@@ -1222,6 +1227,7 @@ export default function Game2Page() {
                         } else {
                             currentRotation = targetRot;
                             currentPosition = nextPosition;
+                            currentTileRef.current = nextPosition;
                             hasStarted = true;
                             resolve();
                         }
@@ -1325,11 +1331,167 @@ export default function Game2Page() {
         };
         window.addEventListener('resize', handleResize);
 
+        // Function to create paper with player image on a tile
+        const createPaperOnTile = (tileIndex: number, playerImage: string, scene: THREE.Scene) => {
+            // Remove existing paper if any
+            if (papersRef.current.has(tileIndex)) {
+                const existingPaper = papersRef.current.get(tileIndex);
+                if (existingPaper) {
+                    scene.remove(existingPaper);
+                }
+                papersRef.current.delete(tileIndex);
+            }
+
+            // Load player image texture
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load(playerImage, (texture) => {
+                // Create canvas for paper with rounded top
+                const paperCanvas = document.createElement('canvas');
+                const paperCtx = paperCanvas.getContext('2d');
+                const paperWidth = 256;
+                const paperHeight = 320;
+                paperCanvas.width = paperWidth;
+                paperCanvas.height = paperHeight;
+
+                if (paperCtx) {
+                    // Draw paper with rounded top corners
+                    const radius = 30;
+                    const borderWidth = 8;
+
+                    paperCtx.fillStyle = '#f5f5dc';
+                    paperCtx.strokeStyle = '#d4d4aa';
+                    paperCtx.lineWidth = borderWidth;
+
+                    // Draw paper shape with rounded top corners
+                    paperCtx.beginPath();
+                    paperCtx.moveTo(radius, 0);
+                    paperCtx.lineTo(paperWidth - radius, 0);
+                    paperCtx.quadraticCurveTo(paperWidth, 0, paperWidth, radius);
+                    paperCtx.lineTo(paperWidth, paperHeight);
+                    paperCtx.lineTo(0, paperHeight);
+                    paperCtx.lineTo(0, radius);
+                    paperCtx.quadraticCurveTo(0, 0, radius, 0);
+                    paperCtx.closePath();
+                    paperCtx.fill();
+                    paperCtx.stroke();
+
+                    // Draw player image
+                    const imageSize = 160;
+                    const imageX = (paperWidth - imageSize) / 2;
+                    const imageY = 40;
+
+                    // Create circular clip for image
+                    paperCtx.save();
+                    paperCtx.beginPath();
+                    paperCtx.arc(paperWidth / 2, imageY + imageSize / 2, imageSize / 2, 0, Math.PI * 2);
+                    paperCtx.clip();
+                    paperCtx.drawImage(texture.image, imageX, imageY, imageSize, imageSize);
+                    paperCtx.restore();
+
+                    // Draw border around image
+                    paperCtx.beginPath();
+                    paperCtx.arc(paperWidth / 2, imageY + imageSize / 2, imageSize / 2, 0, Math.PI * 2);
+                    paperCtx.strokeStyle = '#ffd700';
+                    paperCtx.lineWidth = 6;
+                    paperCtx.stroke();
+                }
+
+                // Create texture from canvas
+                const paperTexture = new THREE.CanvasTexture(paperCanvas);
+
+                // Create paper geometry (width matches tile size: 1.25, height: 1.2)
+                const paperGeometry = new THREE.PlaneGeometry(1.25, 1.2);
+                const paperMaterial = new THREE.MeshStandardMaterial({
+                    map: paperTexture,
+                    side: THREE.DoubleSide,
+                    transparent: true
+                });
+                const paperMesh = new THREE.Mesh(paperGeometry, paperMaterial);
+
+                // Position paper on the tile
+                const tilePos = tilePositions[tileIndex];
+
+                // Determine position based on which side of the board the tile is on
+                // Left column: x is min, place paper at left edge
+                // Bottom row: z is max, place paper at bottom edge
+                // Right column: x is max, place paper at right edge
+                // Top row: z is min, place paper at top edge
+                const isLeftCol = tileIndex >= 0 && tileIndex < 9;
+                const isBottomRow = tileIndex >= 9 && tileIndex < 17;
+                const isRightCol = tileIndex >= 17 && tileIndex < 25;
+                const isTopRow = tileIndex >= 25 && tileIndex < 32;
+
+                let paperX = tilePos.x;
+                let paperZ = tilePos.z;
+                let rotationY = 0;
+
+                if (isLeftCol) {
+                    // Left side - place paper at inner edge (facing center)
+                    paperX = tilePos.x + 0.6;
+                    rotationY = -Math.PI / 2; // Face right (toward center)
+                } else if (isBottomRow) {
+                    // Bottom side - place paper at inner edge (facing center)
+                    paperZ = tilePos.z - 0.6;
+                    rotationY = Math.PI; // Face backward (toward center)
+                } else if (isRightCol) {
+                    // Right side - place paper at inner edge (facing center)
+                    paperX = tilePos.x - 0.6;
+                    rotationY = Math.PI / 2; // Face left (toward center)
+                } else if (isTopRow) {
+                    // Top side - place paper at inner edge (facing center)
+                    paperZ = tilePos.z + 0.6;
+                    rotationY = 0; // Face forward (toward center)
+                }
+
+                // Position paper (laying flat initially)
+                paperMesh.position.set(paperX, 10.8, paperZ);
+                paperMesh.rotation.x = -Math.PI / 2; // Lay flat initially
+                paperMesh.rotation.y = rotationY;
+                paperMesh.castShadow = true;
+                paperMesh.receiveShadow = true;
+
+                scene.add(paperMesh);
+                papersRef.current.set(tileIndex, paperMesh);
+
+                // Delay animation to wait for overlay to close
+                setTimeout(() => {
+                    // Animate paper standing up
+                    const startRotationX = paperMesh.rotation.x;
+                    const targetRotationX = 0; // Stand up vertically
+                    const duration = 400; // Slightly longer duration
+                    const startTime = Date.now();
+
+                    function animatePaper() {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
+
+                        paperMesh.rotation.x = startRotationX + (targetRotationX - startRotationX) * easeOut;
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animatePaper);
+                        }
+                    }
+                    animatePaper();
+                }, 300); // 300ms delay before animation starts
+            });
+        };
+
+        // Listen for paper placement events
+        const handlePlacePaper = (event: Event) => {
+            const customEvent = event as CustomEvent<{ tileIndex: number; playerImage: string }>;
+            const { tileIndex, playerImage } = customEvent.detail;
+            createPaperOnTile(tileIndex, playerImage, scene);
+        };
+
+        window.addEventListener('placePaper', handlePlacePaper);
+
         // Cleanup
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('moveCharacter', moveCharacter);
             window.removeEventListener('rollDice', rollDiceHandler);
+            window.removeEventListener('placePaper', handlePlacePaper);
             renderer.dispose();
             controls.dispose();
         };
@@ -1719,6 +1881,19 @@ export default function Game2Page() {
                         </button>
 
                         <button
+                            onClick={() => {
+                                // Place paper on current tile
+                                const event = new CustomEvent('placePaper', {
+                                    detail: {
+                                        tileIndex: currentTileRef.current,
+                                        playerImage: players[0].image // Use current player's image
+                                    }
+                                });
+                                window.dispatchEvent(event);
+                                // Close overlay
+                                setShowTileOverlay(false);
+                                setShowDiceResult(false);
+                            }}
                             className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
                             style={{
                                 background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
