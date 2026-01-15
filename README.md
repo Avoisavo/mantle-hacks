@@ -174,7 +174,6 @@ vercel
 ### Token Addresses
 - **MNT Token (Mantle Sepolia)**: `0x35578E7e8949B5a59d40704dCF6D6faEC2Fb1D17`
 - **MNT Token (L1 Sepolia)**: `0x65e37b558f64e2be5768db46df22f93d85741a9e`
-- **Native MNT (L2)**: `0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000`
 
 ### Chain IDs
 - **Ethereum Sepolia (L1)**: `11155111`
