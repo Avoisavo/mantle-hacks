@@ -199,6 +199,7 @@ export default function Game2Page() {
         rotation: number;
     }
 
+    const sceneRef = useRef<THREE.Scene | null>(null);
     const playersRef = useRef<GamePlayer[]>([
         { id: 0, name: 'Black', model: null, currentPosition: 0, mixer: null, rotation: 0 },
         { id: 1, name: 'Yellow', model: null, currentPosition: 8, mixer: null, rotation: 0 },
@@ -206,6 +207,9 @@ export default function Game2Page() {
         { id: 3, name: 'Chicken', model: null, currentPosition: 24, mixer: null, rotation: 0 },
     ]);
     const currentPlayerIndexRef = useRef(0);
+    const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
+    const currentTileRef = useRef<number>(0);
+    const [rightViewMode, setRightViewMode] = useState<'model' | 'nft'>('model');
 
     // Camera transition refs
     const isCameraTransitioningRef = useRef(false);
@@ -381,7 +385,7 @@ export default function Game2Page() {
             // The dice floats in front of and slightly above the character
             // Based on the 20-degree camera angle and character positioning
             const diceX = canvas.width / 2; // Center of screen for straight up (90 degrees)
-            const diceY = canvas.height * 0.80; // Shorter arc - closer to button
+            const diceY = canvas.height * 0.65; // Longer arc - higher on screen
 
             // Number of lightning bolts based on charge power
             const numBolts = 2 + Math.floor(chargePower / 30);
@@ -596,7 +600,7 @@ export default function Game2Page() {
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.target.set(0, 10.6, 0);
+        controls.target.set(0, 11, 0);
 
         // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -1050,7 +1054,7 @@ export default function Game2Page() {
             else if (position > 16 && position < 24) rotation = Math.PI; // Right column - facing forward (down)
             else if (position > 24) rotation = -Math.PI / 2; // Top row - facing forward (left)
 
-            player.model.position.set(tilePos.x, 10.55, tilePos.z);
+            player.model.position.set(tilePos.x, 10.6, tilePos.z);
             player.model.rotation.y = rotation;
             player.rotation = rotation;
         };
@@ -1058,6 +1062,7 @@ export default function Game2Page() {
         // let currentPosition = 0; // Replaced by playersRef
         // let currentRotation = 0; // Replaced by playersRef
         let hasStarted = false;
+        currentTileRef.current = 0;
 
         const fbxLoader = new FBXLoader();
 
@@ -1420,7 +1425,7 @@ export default function Game2Page() {
                         easeOut
                     );
 
-                    controls.target.lerp(new THREE.Vector3(0, 10.6, 0), easeOut);
+                    controls.target.lerp(new THREE.Vector3(0, 11, 0), easeOut);
                 }
                 // Phase 2: Move from (-7, 11.5, -7) to 20-degree position - 2 seconds
                 else if (introAnimationTime < phase1Duration + phase2Duration) {
@@ -1454,7 +1459,7 @@ export default function Game2Page() {
                         easeInOut
                     );
 
-                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 10.55, 0);
+                    const targetLookAt = character ? character.position.clone() : new THREE.Vector3(0, 11, 0);
                     controls.target.lerp(targetLookAt, easeInOut);
                 } else {
                     // Animation complete
@@ -1903,7 +1908,7 @@ export default function Game2Page() {
 
                 await new Promise<void>((resolve) => {
                     const startPos = player.model!.position.clone();
-                    const endPos = new THREE.Vector3(targetPos.x, 10.55, targetPos.z);
+                    const endPos = new THREE.Vector3(targetPos.x, 10.6, targetPos.z);
                     const startRot = player.model!.rotation.y;
 
                     // Specific rotation logic:
@@ -1946,6 +1951,7 @@ export default function Game2Page() {
                         } else {
                             player.rotation = targetRot;
                             player.currentPosition = nextPosition;
+                            currentTileRef.current = nextPosition;
                             hasStarted = true;
                             resolve();
                         }
@@ -2283,7 +2289,7 @@ export default function Game2Page() {
                 }
 
                 // Position paper (laying flat initially)
-                paperMesh.position.set(paperX, 10.8, paperZ);
+                paperMesh.position.set(paperX, 11, paperZ);
                 paperMesh.rotation.x = -Math.PI / 2; // Lay flat initially
                 paperMesh.rotation.y = rotationY;
                 paperMesh.castShadow = true;
@@ -2312,7 +2318,7 @@ export default function Game2Page() {
                         }
                     }
                     animatePaper();
-                }, 300); // 300ms delay before animation starts
+                }, 800); // 800ms delay before animation starts (wait for overlay to close)
             });
         };
 
@@ -2331,6 +2337,7 @@ export default function Game2Page() {
             window.removeEventListener('moveCharacter', moveCharacter);
             window.removeEventListener('rollDice', rollDiceHandler);
             window.removeEventListener('switchToNextPlayer', switchToNextPlayer);
+            window.removeEventListener('placePaper', handlePlacePaper);
             renderer.dispose();
             controls.dispose();
         };
@@ -2452,6 +2459,40 @@ export default function Game2Page() {
             const event = new CustomEvent('switchToNextPlayer');
             window.dispatchEvent(event);
         }, 300);
+    };
+
+    // Helper function to handle PAY action - places paper on current tile
+    const handlePayAction = () => {
+        // Hide dice immediately when action is selected
+        if (diceMeshRef.current) {
+            diceMeshRef.current.visible = false;
+        }
+
+        // Get current player info
+        const currentPlayerIndex = currentPlayerIndexRef.current;
+        const currentTile = currentTileRef.current;
+
+        // Get player image from the players array (first 4 are the game players)
+        const playerImage = players[currentPlayerIndex]?.image || '/game2/greenguy.glb';
+
+        // Close overlay immediately
+        setShowTileOverlay(false);
+        setShowDiceResult(false);
+
+        // Dispatch event to place paper on current tile
+        const event = new CustomEvent('placePaper', {
+            detail: {
+                tileIndex: currentTile,
+                playerImage: playerImage
+            }
+        });
+        window.dispatchEvent(event);
+
+        // Switch to next player after paper animation completes
+        setTimeout(() => {
+            const switchEvent = new CustomEvent('switchToNextPlayer');
+            window.dispatchEvent(switchEvent);
+        }, 1200); // 800ms delay + 400ms animation duration
     };
 
     return (
@@ -2732,7 +2773,7 @@ export default function Game2Page() {
                             </button>
 
                             <button
-                                onClick={handleActionSelection}
+                                onClick={handlePayAction}
                                 className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
                                 style={{
                                     background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
@@ -2782,9 +2823,64 @@ export default function Game2Page() {
 
                         {/* Right side - house 3D scene (60%) */}
                         <div className="w-[60%] relative">
-                            {/* House 3D Scene */}
-                            <div ref={houseContainerRef} className="w-full h-full relative">
+                            {/* Toggle buttons - vertically centered on right */}
+                            <div className="absolute top-1/2 right-4 -translate-y-1/2 z-10 flex flex-col gap-2">
+                                <button
+                                    onClick={() => setRightViewMode('model')}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                        rightViewMode === 'model'
+                                            ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/50 scale-110'
+                                            : 'bg-black/50 text-cyan-400 border border-cyan-500/50 hover:bg-black/70'
+                                    }`}
+                                    title="View 3D Model"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M2 20h20"></path>
+                                        <path d="m5 16 4-8 4 6 5-10 4 8"></path>
+                                        <path d="M3.5 12h17"></path>
+                                        <path d="M7 8v8"></path>
+                                        <path d="M12 10v4"></path>
+                                        <path d="M17 8v8"></path>
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setRightViewMode('nft')}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                        rightViewMode === 'nft'
+                                            ? 'bg-purple-500 text-black shadow-lg shadow-purple-500/50 scale-110'
+                                            : 'bg-black/50 text-purple-400 border border-purple-500/50 hover:bg-black/70'
+                                    }`}
+                                    title="View NFT Card"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Content - conditionally render model or NFT card */}
+                            {/* House 3D Scene - always rendered but visibility controlled */}
+                            <div ref={houseContainerRef} className="w-full h-full relative" style={{ display: rightViewMode === 'model' ? 'block' : 'none' }}>
                                 <canvas ref={houseCanvasRef} className="absolute inset-0 w-full h-full" />
+                            </div>
+
+                            {/* NFT Card Display - visibility controlled */}
+                            <div className="w-full h-full flex items-center justify-center p-8" style={{ display: rightViewMode === 'nft' ? 'flex' : 'none' }}>
+                                <div className="w-full max-w-md" style={{ transform: 'translate(10%, 10%)' }}>
+                                    <NFTCard
+                                        id={1}
+                                        name="Luxury Villa"
+                                        image="/game2/house_01.glb"
+                                        rarity="LEGENDARY"
+                                        price="1,500,000"
+                                        description="A stunning luxury villa with panoramic views, featuring modern architecture, premium finishes, and state-of-the-art amenities. Perfect for those seeking the ultimate in comfort and style."
+                                        color="#00ffff"
+                                        glowColor="#00ffff"
+                                        contractAddress="0x1234567890abcdef1234567890abcdef12345678"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
