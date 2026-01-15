@@ -118,6 +118,29 @@ function getDiceValue(diceBody: CANNON.Body): number {
     return topFace;
 }
 
+// Helper to remove root motion (forward/backward movement) from animation
+function removeRootMotion(clip: THREE.AnimationClip) {
+    clip.tracks.forEach(track => {
+        // Look for position tracks of the root/hips
+        // Most Mixamo animations use "mixamorigHips.position" or "Hips.position"
+        if (track.name.endsWith('.position') &&
+            (track.name.toLowerCase().includes('hips') || track.name.toLowerCase().includes('root'))) {
+
+            const values = track.values;
+            // The values array is [x1, y1, z1, x2, y2, z2, ...]
+            // We want to keep Y (vertical bounce) but flatten X and Z to the initial position
+
+            const startX = values[0];
+            const startZ = values[2];
+
+            for (let i = 0; i < values.length; i += 3) {
+                values[i] = startX;     // Normalize X
+                values[i + 2] = startZ; // Normalize Z
+            }
+        }
+    });
+}
+
 // Player data interface
 interface Player {
     id: number;
@@ -147,6 +170,22 @@ export default function Game2Page() {
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
     const cityRef = useRef<THREE.Object3D | null>(null);
+    const blackRunModelRef = useRef<THREE.Group | null>(null);
+    const blackStandModelRef = useRef<THREE.Group | null>(null);
+    const blackRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const blackStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const smRunModelRef = useRef<THREE.Group | null>(null);
+    const smStandModelRef = useRef<THREE.Group | null>(null);
+    const smRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const smStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const yellowRunModelRef = useRef<THREE.Group | null>(null);
+    const yellowStandModelRef = useRef<THREE.Group | null>(null);
+    const yellowRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const yellowStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const cyanRunModelRef = useRef<THREE.Group | null>(null);
+    const cyanStandModelRef = useRef<THREE.Group | null>(null);
+    const cyanRunMixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const cyanStandMixerRef = useRef<THREE.AnimationMixer | null>(null);
     const mixers: THREE.AnimationMixer[] = [];
 
     // Game player interface (for 3D game logic)
@@ -166,7 +205,7 @@ export default function Game2Page() {
         { id: 3, name: 'Chicken', model: null, currentPosition: 24, mixer: null, rotation: 0 },
     ]);
     const currentPlayerIndexRef = useRef(0);
-    
+
     // Camera transition refs
     const isCameraTransitioningRef = useRef(false);
     const cameraTransitionStartTimeRef = useRef(0);
@@ -995,9 +1034,9 @@ export default function Game2Page() {
         // Helper function to position a player at their current tile
         const positionPlayerAtTile = (player: GamePlayer, position: number) => {
             if (!player.model) return;
-            
+
             const tilePos = tilePositions[position];
-            
+
             // Calculate rotation based on position - face the direction they'll be walking
             let rotation = 0;
             if (position === 0) rotation = 0; // Black model at start - facing forward
@@ -1008,7 +1047,7 @@ export default function Game2Page() {
             else if (position > 8 && position < 16) rotation = Math.PI / 2; // Bottom row - facing forward (right)
             else if (position > 16 && position < 24) rotation = Math.PI; // Right column - facing forward (down)
             else if (position > 24) rotation = -Math.PI / 2; // Top row - facing forward (left)
-            
+
             player.model.position.set(tilePos.x, 10.55, tilePos.z);
             player.model.rotation.y = rotation;
             player.rotation = rotation;
@@ -1025,6 +1064,7 @@ export default function Game2Page() {
             '/models/black-stand.fbx',
             (object) => {
                 const player = playersRef.current[0];
+                blackStandModelRef.current = object;
                 player.model = object;
                 character = object; // Keep for backward compatibility/camera init for now
                 positionPlayerAtTile(player, player.currentPosition);
@@ -1038,6 +1078,7 @@ export default function Game2Page() {
 
                 // Setup animation mixer
                 const charMixer = new THREE.AnimationMixer(character);
+                blackStandMixerRef.current = charMixer;
                 player.mixer = charMixer;
                 mixers.push(charMixer);
                 if (object.animations && object.animations.length > 0) {
@@ -1055,7 +1096,7 @@ export default function Game2Page() {
                     }
                 });
                 scene.add(character);
-                console.log('Character loaded successfully');
+                console.log('Black stand loaded successfully');
                 checkLoaded();
             },
             (xhr) => {
@@ -1067,18 +1108,59 @@ export default function Game2Page() {
             }
         );
 
+        // Load Black Run model for movement animation
+        fbxLoader.load(
+            '/models/black-run.fbx',
+            (object) => {
+                blackRunModelRef.current = object;
+
+                // Remove root motion from the run animation so it runs "in place"
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false; // Hide initially, only show when moving
+
+                // Setup animation mixer for run model
+                const runMixer = new THREE.AnimationMixer(object);
+                blackRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity); // Loop repeatedly
+                    action.play();
+                    console.log('Playing run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Black run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading black run:', error)
+        );
+
         // Load secondary model (Yellow Stand) at position 8
         fbxLoader.load(
             '/models/yellow-stand.fbx',
             (object) => {
                 object.scale.set(0.7, 0.7, 0.7);
+                yellowStandModelRef.current = object;
 
                 // Animation
                 const yellowMixer = new THREE.AnimationMixer(object);
+                yellowStandMixerRef.current = yellowMixer;
                 const player = playersRef.current[1];
                 player.model = object;
                 player.mixer = yellowMixer;
-                
+
                 // Position at correct tile position
                 positionPlayerAtTile(player, player.currentPosition);
                 // Ensure rotation matches the calculated rotation
@@ -1103,18 +1185,98 @@ export default function Game2Page() {
             (error) => console.error('Error loading yellow stand:', error)
         );
 
+        // Load Yellow Run model
+        fbxLoader.load(
+            '/models/yellow-run.fbx',
+            (object) => {
+                yellowRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                yellowRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing yellow run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Yellow run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading yellow run:', error)
+        );
+
+        // Load Cyan Run model
+        fbxLoader.load(
+            '/models/cyan-run.fbx',
+            (object) => {
+                cyanRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                cyanRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing cyan run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('Cyan run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading cyan run:', error)
+        );
+
         // Load SM Stand model at position 16
         fbxLoader.load(
             '/models/sm-stand.fbx',
             (object) => {
                 object.scale.set(0.7, 0.7, 0.7);
+                smStandModelRef.current = object;
 
                 // Animation
                 const smMixer = new THREE.AnimationMixer(object);
+                smStandMixerRef.current = smMixer;
                 const player = playersRef.current[2];
                 player.model = object;
                 player.mixer = smMixer;
-                
+
                 // Position at correct tile position
                 positionPlayerAtTile(player, player.currentPosition);
                 // Ensure rotation matches the calculated rotation
@@ -1139,26 +1301,66 @@ export default function Game2Page() {
             (error) => console.error('Error loading SM stand:', error)
         );
 
-        // Load ChickenGuy (GLB) at position 24
-        loader.load(
-            '/models/ChickenGuy.glb',
-            (gltf) => {
-                const object = gltf.scene;
+        // Load SM Run model
+        fbxLoader.load(
+            '/models/sm-run.fbx',
+            (object) => {
+                smRunModelRef.current = object;
+
+                // Remove root motion
+                if (object.animations && object.animations.length > 0) {
+                    removeRootMotion(object.animations[0]);
+                }
+
+                const scale = 0.7;
+                object.scale.set(scale, scale, scale);
+                object.visible = false;
+
+                // Setup animation mixer
+                const runMixer = new THREE.AnimationMixer(object);
+                smRunMixerRef.current = runMixer;
+                mixers.push(runMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = runMixer.clipAction(object.animations[0]);
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.play();
+                    console.log('Playing sm run animation:', object.animations[0].name);
+                }
+
+                object.traverse((child) => {
+                    if ((child as THREE.Mesh).isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                scene.add(object);
+                console.log('SM run loaded successfully');
+            },
+            undefined,
+            (error) => console.error('Error loading sm run:', error)
+        );
+
+        // Load Cyan Stand (FBX) at position 24
+        fbxLoader.load(
+            '/models/cyan-stand.fbx',
+            (object) => {
                 object.scale.set(0.7, 0.7, 0.7);
+                cyanStandModelRef.current = object;
 
                 // Animation
-                const chickenMixer = new THREE.AnimationMixer(object);
+                const cyanMixer = new THREE.AnimationMixer(object);
+                cyanStandMixerRef.current = cyanMixer;
                 const player = playersRef.current[3];
                 player.model = object;
-                player.mixer = chickenMixer;
-                
+                player.mixer = cyanMixer;
+
                 // Position at correct tile position
                 positionPlayerAtTile(player, player.currentPosition);
                 // Ensure rotation matches the calculated rotation
                 object.rotation.y = player.rotation;
-                mixers.push(chickenMixer);
-                if (gltf.animations && gltf.animations.length > 0) {
-                    const action = chickenMixer.clipAction(gltf.animations[0]);
+                mixers.push(cyanMixer);
+                if (object.animations && object.animations.length > 0) {
+                    const action = cyanMixer.clipAction(object.animations[0]);
                     action.play();
                 }
 
@@ -1170,10 +1372,10 @@ export default function Game2Page() {
                 });
 
                 scene.add(object);
-                console.log('ChickenGuy loaded successfully');
+                console.log('Cyan stand loaded successfully');
             },
             undefined,
-            (error) => console.error('Error loading ChickenGuy:', error)
+            (error) => console.error('Error loading Cyan stand:', error)
         );
 
         // Animation loop
@@ -1301,12 +1503,12 @@ export default function Game2Page() {
                 const characterPos = character.position.clone();
                 characterPos.y = cityCenter.y; // Use same Y level for distance calculation
                 const distanceToCity = characterPos.distanceTo(cityCenter);
-                
+
                 // Fade out city when player is within 3 units, fully visible at 5+ units
                 const fadeStartDistance = 3;
                 const fadeEndDistance = 5;
                 let opacity = 1;
-                
+
                 if (distanceToCity < fadeEndDistance) {
                     if (distanceToCity < fadeStartDistance) {
                         opacity = 0.1; // Almost invisible when very close
@@ -1317,7 +1519,7 @@ export default function Game2Page() {
                         opacity = 0.1 + (distanceInRange / fadeRange) * 0.9;
                     }
                 }
-                
+
                 // Apply opacity to all city materials
                 cityRef.current.traverse((child) => {
                     if (child.isMesh) {
@@ -1347,12 +1549,12 @@ export default function Game2Page() {
                     const transitionDuration = 1.5; // 1.5 seconds
                     const elapsed = time - cameraTransitionStartTimeRef.current;
                     const progress = Math.min(elapsed / transitionDuration, 1);
-                    
+
                     // Smooth ease-in-out curve
                     const easeInOut = progress < 0.5
                         ? 2 * progress * progress
                         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                    
+
                     if (cameraTransitionStartPosRef.current && cameraTransitionEndPosRef.current &&
                         cameraTransitionStartTargetRef.current && cameraTransitionEndTargetRef.current) {
                         // Interpolate camera position
@@ -1361,7 +1563,7 @@ export default function Game2Page() {
                             cameraTransitionEndPosRef.current,
                             easeInOut
                         );
-                        
+
                         // Interpolate camera target
                         controls.target.lerpVectors(
                             cameraTransitionStartTargetRef.current,
@@ -1369,7 +1571,7 @@ export default function Game2Page() {
                             easeInOut
                         );
                     }
-                    
+
                     // Transition complete
                     if (progress >= 1) {
                         isCameraTransitioningRef.current = false;
@@ -1379,12 +1581,12 @@ export default function Game2Page() {
                     // Player 2 (Yellow) gets a higher angle to avoid building blocking view
                     const currentPlayerIndex = currentPlayerIndexRef.current;
                     const isPlayer2 = currentPlayerIndex === 1;
-                    
+
                     const distance = 2.5;
                     // Player 2 uses a steeper angle (35 degrees) to see over the building
                     const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
                     const heightOffset = isPlayer2 ? 0.8 : 0.5; // Higher camera for player 2
-                    
+
                     const offset = new THREE.Vector3(
                         -distance * Math.cos(angle),
                         heightOffset,
@@ -1483,6 +1685,180 @@ export default function Game2Page() {
         }
         animate();
 
+        // Function to swap black model between stand and run
+        const swapBlackModel = (useRun: boolean) => {
+            const player = playersRef.current[0];
+            if (!player.model || !blackStandModelRef.current || !blackRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                blackStandModelRef.current.visible = false;
+                blackRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                blackRunModelRef.current.position.copy(blackStandModelRef.current.position);
+                blackRunModelRef.current.rotation.copy(blackStandModelRef.current.rotation);
+                blackRunModelRef.current.scale.copy(blackStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = blackRunModelRef.current;
+                if (blackRunMixerRef.current) {
+                    player.mixer = blackRunMixerRef.current;
+                    // Ensure run animation is playing smoothly without looping
+                    if (blackRunModelRef.current.animations && blackRunModelRef.current.animations.length > 0) {
+                        const action = blackRunMixerRef.current.clipAction(blackRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity); // Loop repeatedly
+                        action.timeScale = 1.0; // Normal speed
+                        action.reset().play(); // Reset and play smoothly
+                    }
+                }
+                character = blackRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                blackRunModelRef.current.visible = false;
+                blackStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                blackStandModelRef.current.position.copy(blackRunModelRef.current.position);
+                blackStandModelRef.current.rotation.copy(blackRunModelRef.current.rotation);
+                blackStandModelRef.current.scale.copy(blackStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = blackStandModelRef.current;
+                if (blackStandMixerRef.current) {
+                    player.mixer = blackStandMixerRef.current;
+                }
+                character = blackStandModelRef.current;
+            }
+        };
+
+        // Function to swap SM model between stand and run
+        const swapSmModel = (useRun: boolean) => {
+            const player = playersRef.current[2];
+            if (!player.model || !smStandModelRef.current || !smRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                smStandModelRef.current.visible = false;
+                smRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                smRunModelRef.current.position.copy(smStandModelRef.current.position);
+                smRunModelRef.current.rotation.copy(smStandModelRef.current.rotation);
+                smRunModelRef.current.scale.copy(smStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = smRunModelRef.current;
+                if (smRunMixerRef.current) {
+                    player.mixer = smRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (smRunModelRef.current.animations && smRunModelRef.current.animations.length > 0) {
+                        const action = smRunMixerRef.current.clipAction(smRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = smRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                smRunModelRef.current.visible = false;
+                smStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                smStandModelRef.current.position.copy(smRunModelRef.current.position);
+                smStandModelRef.current.rotation.copy(smRunModelRef.current.rotation);
+                smStandModelRef.current.scale.copy(smStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = smStandModelRef.current;
+                if (smStandMixerRef.current) {
+                    player.mixer = smStandMixerRef.current;
+                }
+                character = smStandModelRef.current;
+            }
+        };
+
+        // Function to swap Yellow model between stand and run
+        const swapYellowModel = (useRun: boolean) => {
+            const player = playersRef.current[1];
+            if (!player.model || !yellowStandModelRef.current || !yellowRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                yellowStandModelRef.current.visible = false;
+                yellowRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                yellowRunModelRef.current.position.copy(yellowStandModelRef.current.position);
+                yellowRunModelRef.current.rotation.copy(yellowStandModelRef.current.rotation);
+                yellowRunModelRef.current.scale.copy(yellowStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = yellowRunModelRef.current;
+                if (yellowRunMixerRef.current) {
+                    player.mixer = yellowRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (yellowRunModelRef.current.animations && yellowRunModelRef.current.animations.length > 0) {
+                        const action = yellowRunMixerRef.current.clipAction(yellowRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = yellowRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                yellowRunModelRef.current.visible = false;
+                yellowStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                yellowStandModelRef.current.position.copy(yellowRunModelRef.current.position);
+                yellowStandModelRef.current.rotation.copy(yellowRunModelRef.current.rotation);
+                yellowStandModelRef.current.scale.copy(yellowStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = yellowStandModelRef.current;
+                if (yellowStandMixerRef.current) {
+                    player.mixer = yellowStandMixerRef.current;
+                }
+                character = yellowStandModelRef.current;
+            }
+        };
+
+        // Function to swap Cyan model between stand and run
+        const swapCyanModel = (useRun: boolean) => {
+            const player = playersRef.current[3];
+            if (!player.model || !cyanStandModelRef.current || !cyanRunModelRef.current) return;
+
+            if (useRun) {
+                // Switch to run model
+                cyanStandModelRef.current.visible = false;
+                cyanRunModelRef.current.visible = true;
+                // Copy position and rotation from stand to run
+                cyanRunModelRef.current.position.copy(cyanStandModelRef.current.position);
+                cyanRunModelRef.current.rotation.copy(cyanStandModelRef.current.rotation);
+                cyanRunModelRef.current.scale.copy(cyanStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = cyanRunModelRef.current;
+                if (cyanRunMixerRef.current) {
+                    player.mixer = cyanRunMixerRef.current;
+                    // Ensure run animation is playing smoothly
+                    if (cyanRunModelRef.current.animations && cyanRunModelRef.current.animations.length > 0) {
+                        const action = cyanRunMixerRef.current.clipAction(cyanRunModelRef.current.animations[0]);
+                        action.setLoop(THREE.LoopRepeat, Infinity);
+                        action.timeScale = 1.0;
+                        action.reset().play();
+                    }
+                }
+                character = cyanRunModelRef.current;
+            } else {
+                // Switch back to stand model
+                cyanRunModelRef.current.visible = false;
+                cyanStandModelRef.current.visible = true;
+                // Copy position and rotation from run to stand
+                cyanStandModelRef.current.position.copy(cyanRunModelRef.current.position);
+                cyanStandModelRef.current.rotation.copy(cyanRunModelRef.current.rotation);
+                cyanStandModelRef.current.scale.copy(cyanStandModelRef.current.scale);
+                // Update player model and mixer references
+                player.model = cyanStandModelRef.current;
+                if (cyanStandMixerRef.current) {
+                    player.mixer = cyanStandMixerRef.current;
+                }
+                character = cyanStandModelRef.current;
+            }
+        };
+
+
+
         // Handle character movement
         const moveCharacter = async (event: Event) => {
             const customEvent = event as CustomEvent<{ steps: number }>;
@@ -1493,6 +1869,17 @@ export default function Game2Page() {
 
             // If model isn't loaded yet, skip
             if (!player.model) return;
+
+            // Switch models to run animation when movement starts
+            if (currentPlayerIndex === 0) {
+                swapBlackModel(true);
+            } else if (currentPlayerIndex === 1) {
+                swapYellowModel(true);
+            } else if (currentPlayerIndex === 2) {
+                swapSmModel(true);
+            } else if (currentPlayerIndex === 3) {
+                swapCyanModel(true);
+            }
 
             // Update global 'character' reference for camera focus
             character = player.model as THREE.Group;
@@ -1555,6 +1942,17 @@ export default function Game2Page() {
                     }
                     animateMove();
                 });
+            }
+
+            // Switch models back to stand animation when movement ends
+            if (currentPlayerIndex === 0) {
+                swapBlackModel(false);
+            } else if (currentPlayerIndex === 1) {
+                swapYellowModel(false);
+            } else if (currentPlayerIndex === 2) {
+                swapSmModel(false);
+            } else if (currentPlayerIndex === 3) {
+                swapCyanModel(false);
             }
 
             // End of turn logic
@@ -1636,7 +2034,7 @@ export default function Game2Page() {
                 (Math.random() - 0.5) * torqueStrength
             );
             diceBody.applyTorque(torque);
-            
+
             // Apply initial angular velocity for smoother, faster spinning start
             const angularVelStrength = 12 + powerMultiplier * 18; // 12-30 for smooth initial spin
             diceBody.angularVelocity.set(
@@ -1660,13 +2058,13 @@ export default function Game2Page() {
             if (position === 8) return -Math.PI / 2;
             if (position === 16) return -Math.PI;
             if (position === 24) return -3 * Math.PI / 2;
-            
+
             // For positions between corners, determine which side they're on
             if (position > 0 && position < 8) return 0; // Top side
             if (position > 8 && position < 16) return -Math.PI / 2; // Right side
             if (position > 16 && position < 24) return -Math.PI; // Bottom side
             if (position > 24) return -3 * Math.PI / 2; // Left side
-            
+
             return 0;
         };
 
@@ -1676,7 +2074,7 @@ export default function Game2Page() {
             const currentPlayer = playersRef.current[currentPlayerIndex];
             const nextPlayerIndex = (currentPlayerIndex + 1) % 4;
             const nextPlayer = playersRef.current[nextPlayerIndex];
-            
+
             // Check if both players have models loaded
             if (!currentPlayer.model || !nextPlayer.model) {
                 // If models aren't ready, just switch immediately
@@ -1684,15 +2082,15 @@ export default function Game2Page() {
                 character = nextPlayer.model as THREE.Group;
                 return;
             }
-            
+
             // Position next player at their current tile position on the board
             positionPlayerAtTile(nextPlayer, nextPlayer.currentPosition);
             const nextPlayerRotation = nextPlayer.rotation;
-            
+
             // Use actual current camera position and target (more accurate)
             const currentCameraPos = camera.position.clone();
             const currentTarget = controls.target.clone();
-            
+
             // Calculate next player camera position and target
             // Player 2 (Yellow) gets a higher angle to avoid building blocking view
             const isPlayer2 = nextPlayerIndex === 1;
@@ -1700,7 +2098,7 @@ export default function Game2Page() {
             // Player 2 uses a steeper angle (35 degrees) to see over the building
             const angle = isPlayer2 ? (35 * Math.PI) / 180 : (20 * Math.PI) / 180;
             const heightOffset = isPlayer2 ? 0.8 : 0.5; // Higher camera for player 2
-            
+
             const nextOffset = new THREE.Vector3(
                 -distance * Math.cos(angle),
                 heightOffset,
@@ -1709,22 +2107,22 @@ export default function Game2Page() {
             nextOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), nextPlayerRotation);
             const nextCameraPos = nextPlayer.model.position.clone().add(nextOffset);
             const nextTarget = nextPlayer.model.position.clone();
-            
+
             // Store transition start values
             cameraTransitionStartPosRef.current = currentCameraPos.clone();
             cameraTransitionStartTargetRef.current = currentTarget.clone();
             cameraTransitionEndPosRef.current = nextCameraPos.clone();
             cameraTransitionEndTargetRef.current = nextTarget.clone();
-            
+
             // Start transition
             isCameraTransitioningRef.current = true;
             cameraTransitionStartTimeRef.current = Date.now() * 0.001;
-            
+
             // Switch to next player after transition completes
             setTimeout(() => {
                 currentPlayerIndexRef.current = nextPlayerIndex;
                 character = nextPlayer.model as THREE.Group;
-                
+
                 // Show dice in front of the new player and make it ready to roll
                 if (diceMeshRef.current && nextPlayer.model) {
                     // Use player-specific angle to match camera
@@ -1739,19 +2137,19 @@ export default function Game2Page() {
                     // Use the updated rotation
                     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), nextPlayer.rotation);
                     const dicePosition = nextPlayer.model.position.clone().add(offset);
-                    
+
                     diceBody.position.set(dicePosition.x, dicePosition.y, dicePosition.z);
                     diceMeshRef.current.visible = true;
                     diceShouldFloat = true;
                 }
-                
+
                 // Reset dice value and state for next player
                 setDiceValue(null);
                 setShowDiceResult(false);
                 setIsMoving(false);
             }, 1500); // Match transition duration
         };
-        
+
         window.addEventListener('switchToNextPlayer', switchToNextPlayer);
 
         // Handle window resize
