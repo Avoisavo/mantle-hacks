@@ -10,11 +10,10 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { config } from "@/lib/wagmi";
 import { useState } from "react";
 
-const queryClient = new QueryClient();
-
 import Head from "next/head";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [queryClient] = useState(() => new QueryClient());
   
   return (
     <>

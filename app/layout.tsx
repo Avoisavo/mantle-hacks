@@ -1,21 +1,13 @@
-"use client"
+'use client';
 
-import { SessionProvider } from "next-auth/react"
-import { WagmiProvider } from "wagmi"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit"
-import { config } from "@/lib/wagmi"
-import "@rainbow-me/rainbowkit/styles.css"
-import "@/styles/globals.css"
-import { useState } from "react"
+import { Providers } from './providers';
+import '@/styles/globals.css';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [queryClient] = useState(() => new QueryClient())
-
   return (
     <html lang="en">
       <head>
@@ -23,22 +15,9 @@ export default function RootLayout({
         <meta name="description" content="Mantle Hacks Application" />
       </head>
       <body>
-        <WagmiProvider config={config}>
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider>
-              <RainbowKitProvider
-                theme={darkTheme({
-                  accentColor: "#ec4899",
-                  accentColorForeground: "white",
-                  borderRadius: "large",
-                  fontStack: "system",
-                })}
-              >
-                {children}
-              </RainbowKitProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

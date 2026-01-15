@@ -1,16 +1,21 @@
-'use client';
-
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
 import { useSession, signOut } from 'next-auth/react';
-import { useAccount, useDisconnect } from 'wagmi';
-import { LogOut, Wallet, AlertCircle } from 'lucide-react';
+import { useAccount, useDisconnect, useWriteContract, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
+import { LogOut, Wallet, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { AvatarIcon } from '@/components/game/ui/AvatarIcon';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { parseEther } from 'viem';
+import { ABI as TownDeductABI } from '@/utils/towndeductnative';
+import { ABI as TownTokenABI } from '@/utils/towntoken';
+import { TOWN_DEDUCT_NATIVE_ADDRESS, TOWN_TOKEN_NATIVE_ADDRESS } from '@/utils/address';
+import { useTownBalance } from '@/hooks/useTownBalance';
+import { useMntBalance } from '@/hooks/useMntBalance';
 
 // Helper function to create dice textures
 function createDiceTextures(): THREE.Texture[] {
@@ -142,17 +147,29 @@ export default function Game2Page() {
     const [showTileOverlay, setShowTileOverlay] = useState(false);
     const [introComplete, setIntroComplete] = useState(false);
     const [showDiceResult, setShowDiceResult] = useState(false);
+    const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+    const [currentTilePrice, setCurrentTilePrice] = useState<10 | 20>(10);
+    // Account state
+    const { data: session } = useSession();
+    const { address: connectedWallet } = useAccount();
+    const chainId = useChainId();
+    const { switchChainAsync } = useSwitchChain();
+    const { disconnect } = useDisconnect();
+
+    const { writeContractAsync } = useWriteContract();
+    const publicClient = usePublicClient();
+    const [isInternalProcessing, setIsInternalProcessing] = useState(false);
+    const isProcessingTx = isInternalProcessing;
+    
+    // Get balances for the payment menu
+    const { balance: townBalanceFormatted } = useTownBalance(connectedWallet);
+    const { balance: mntBalanceFormatted } = useMntBalance({ address: connectedWallet, chainId: 5003 });
     const diceResultCanvasRef = useRef<HTMLCanvasElement>(null);
     const lightningAnimationRef = useRef<number | null>(null);
     const diceMeshRef = useRef<THREE.Mesh | null>(null);
     const papersRef = useRef<Map<number, THREE.Mesh>>(new Map());
     const sceneRef = useRef<THREE.Scene | null>(null);
     const currentTileRef = useRef<number>(0);
-
-    // Account state
-    const { data: session } = useSession();
-    const { address: connectedWallet } = useAccount();
-    const { disconnect } = useDisconnect();
     const router = useRouter();
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
@@ -162,6 +179,16 @@ export default function Game2Page() {
     const displayName = session?.user?.name || connectedWallet?.slice(0, 6) + "..." + connectedWallet?.slice(-4);
     const displayImage = session?.user?.image;
     const isLoggedIn = session || connectedWallet;
+
+    // Debug logging
+    useEffect(() => {
+        console.log("Wallet Status:", {
+            connected: !!connectedWallet,
+            address: connectedWallet,
+            chainId: chainId,
+            isSessionActive: !!session
+        });
+    }, [connectedWallet, chainId, session]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -305,6 +332,8 @@ export default function Game2Page() {
         }
 
         function drawLightning() {
+            const ctx = canvas?.getContext('2d');
+            if (!ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const buttonRect = buttonRef.current!.getBoundingClientRect();
@@ -407,7 +436,7 @@ export default function Game2Page() {
             canvas.width = 128;
             canvas.height = 128;
 
-            // Draw dice face
+            ctx.clearRect(0, 0, 300, 300); // Clear the canvas
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 128, 128);
 
@@ -1251,6 +1280,8 @@ export default function Game2Page() {
 
             // Show tile overlay after movement completes
             setTimeout(() => {
+                const randomPrice = Math.random() > 0.5 ? 20 : 10;
+                setCurrentTilePrice(randomPrice as 10 | 20);
                 setShowTileOverlay(true);
             }, 500);
         };
@@ -1882,31 +1913,163 @@ export default function Game2Page() {
 
                         <button
                             onClick={() => {
-                                // Place paper on current tile
-                                const event = new CustomEvent('placePaper', {
-                                    detail: {
-                                        tileIndex: currentTileRef.current,
-                                        playerImage: players[0].image // Use current player's image
-                                    }
-                                });
-                                window.dispatchEvent(event);
-                                // Close overlay
-                                setShowTileOverlay(false);
-                                setShowDiceResult(false);
+                                setShowPaymentOptions(!showPaymentOptions);
                             }}
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
+                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center justify-between gap-3"
                             style={{
                                 background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: '2px solid #ffd700',
+                                border: `2px solid ${showPaymentOptions ? '#ffaa00' : '#ffd700'}`,
                                 fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
                                 color: '#ffd700',
                                 fontSize: '1.25rem',
                                 clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
                             }}
                         >
-                            <span style={{ fontSize: '1.5rem' }}>💵</span>
-                            <span>PAY</span>
+                            <div className="flex items-center gap-3">
+                                <span style={{ fontSize: '1.5rem' }}>💵</span>
+                                <span>PAY {currentTilePrice} TOWN</span>
+                            </div>
+                            <span className={`transition-transform duration-300 ${showPaymentOptions ? 'rotate-180' : ''}`} style={{ fontSize: '0.8rem' }}>▼</span>
                         </button>
+
+                        {/* Payment Options Sub-menu */}
+                        {showPaymentOptions && (
+                            <div className="w-[65%] flex flex-col gap-3 mt-[-10px] items-end border-r-2 border-dashed border-yellow-500/30 pr-4 py-2 bg-black/20 backdrop-blur-sm rounded-l-lg">
+                                {!connectedWallet ? (
+                                    <div className="flex flex-col items-center gap-2 p-2 w-full">
+                                        <p className="text-[10px] text-yellow-500 font-bold uppercase text-center">Wallet connection needed for payment</p>
+                                        <ConnectButton.Custom>
+                                            {({ account, chain, openConnectModal, mounted }) => {
+                                                return (
+                                                    <button
+                                                        onClick={openConnectModal}
+                                                        className="px-4 py-2 bg-yellow-500 text-black rounded font-black text-xs uppercase hover:bg-yellow-400 transition-colors shadow-[0_4px_0_#92400e] active:translate-y-1 active:shadow-none"
+                                                        style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                                    >
+                                                        Connect Wallet
+                                                    </button>
+                                                );
+                                            }}
+                                        </ConnectButton.Custom>
+                                    </div>
+                                ) : chainId !== 5003 ? (
+                                    <div className="flex flex-col items-center gap-2 p-2 w-full">
+                                        <p className="text-[10px] text-red-500 font-bold uppercase text-center">Wrong Network</p>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await switchChainAsync({ chainId: 5003 });
+                                                } catch (e) {
+                                                    console.error("Failed to switch chain:", e);
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-red-500 text-white rounded font-black text-xs uppercase hover:bg-red-600 transition-colors shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none"
+                                            style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                        >
+                                            Switch to Mantle Sepolia
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex flex-col items-end gap-1 mb-1 px-2 border-b border-yellow-500/10 w-full pb-2">
+                                            <p className="text-[10px] text-cyan-400/80 font-mono">WALLET: {connectedWallet?.slice(0, 6)}...{connectedWallet?.slice(-4)}</p>
+                                            <div className="flex gap-3">
+                                                <p className="text-[10px] text-yellow-500 font-bold uppercase">{townBalanceFormatted} TOWN</p>
+                                                <p className="text-[10px] text-emerald-400 font-bold uppercase">{mntBalanceFormatted} MNT</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            disabled={isProcessingTx}
+                                            onClick={async () => {
+                                                console.log(`DEDUCT ${currentTilePrice} TOWN Clicked`);
+                                                if (!connectedWallet) {
+                                                    alert("Wallet not connected! Please connect your wallet first.");
+                                                    return;
+                                                }
+                                                if (chainId !== 5003) {
+                                                    console.log("Current Chain ID:", chainId, "Target: 5003");
+                                                    alert("Wrong network! Please switch to Mantle Sepolia Testnet.");
+                                                    try {
+                                                        await switchChainAsync({ chainId: 5003 });
+                                                    } catch (e) {
+                                                        console.error("Manual switch failed", e);
+                                                    }
+                                                    return;
+                                                }
+                                                
+                                                try {
+                                                    setIsInternalProcessing(true);
+                                                    console.log(`1. Starting Approval for ${currentTilePrice} TOWN...`);
+                                                    const approveHash = await writeContractAsync({
+                                                        address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
+                                                        abi: TownTokenABI,
+                                                        functionName: 'approve',
+                                                        args: [TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`, parseEther(currentTilePrice.toString())],
+                                                    });
+                                                    
+                                                    console.log("Approval TX sent:", approveHash);
+                                                    if (publicClient) {
+                                                        console.log("Waiting for approval confirmation...");
+                                                        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+                                                        console.log("Approval confirmed!");
+                                                    }
+
+                                                    // 2. Deduct
+                                                    const functionName = currentTilePrice === 10 ? 'deduct10' : 'deduct20';
+                                                    console.log(`Step 2: Calling ${functionName}...`);
+                                                    const deductHash = await writeContractAsync({
+                                                        address: TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`,
+                                                        abi: TownDeductABI,
+                                                        functionName: functionName,
+                                                    });
+
+                                                    console.log("Deduction TX sent:", deductHash);
+                                                    if (publicClient) {
+                                                        console.log("Waiting for deduction confirmation...");
+                                                        await publicClient.waitForTransactionReceipt({ hash: deductHash });
+                                                        console.log("Deduction confirmed!");
+                                                    }
+
+                                                    // 3. Game logic
+                                                    console.log("Triggering game event: placePaper");
+                                                    const event = new CustomEvent('placePaper', {
+                                                        detail: {
+                                                            tileIndex: currentTileRef.current,
+                                                            playerImage: players[0].image
+                                                        }
+                                                    });
+                                                    window.dispatchEvent(event);
+                                                    setShowTileOverlay(false);
+                                                    setShowDiceResult(false);
+                                                    alert(`Payment of ${currentTilePrice} TOWN successful! Asset acquired.`);
+                                                } catch (error) {
+                                                    console.error("Payment flow failed:", error);
+                                                    alert("Transaction failed: " + (error as any).message);
+                                                } finally {
+                                                    setIsInternalProcessing(false);
+                                                }
+                                            }}
+                                            className="w-full relative group text-left font-bold py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between border-2 border-yellow-500 shadow-[0_0_15px_rgba(255,215,0,0.2)]"
+                                            style={{
+                                                fontFamily: '"Luckiest Guy", cursive',
+                                                color: '#000',
+                                                background: 'linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)',
+                                                letterSpacing: '0.05em'
+                                            }}
+                                        >
+                                            <span>{isProcessingTx ? "PROCESSING..." : `CONFIRM ${currentTilePrice} TOWN`}</span>
+                                            {isProcessingTx ? (
+                                                <RefreshCw size={18} className="animate-spin text-black" />
+                                            ) : (
+                                                <CheckCircle2 size={18} className="text-black" />
+                                            )}
+                                        </button>
+                                        <p className="text-[10px] text-yellow-500/60 font-mono text-center w-full mt-1 italic">Premium Asset: Secure with Town Tokens</p>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
                         <button
                             className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center gap-3"
