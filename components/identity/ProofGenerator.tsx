@@ -7,8 +7,6 @@ import { KYC_REGISTRY_ADDRESS } from '@/utils/address';
 import { kyc as KYC_REGISTRY_ABI } from '@/utils/kyc';
 
 // Type assertion for ethers v6
-const JsonRpcProviderClass = (ethers as any).JsonRpcProvider;
-
 interface ProofGeneratorProps {
   onComplete: (hash?: string) => void;
   userAddress: string;
@@ -30,7 +28,7 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   const checkStatus = useCallback(async () => {
     if (!userAddress || !KYC_REGISTRY_ADDRESS) return false;
     try {
-      const provider = new JsonRpcProviderClass("https://rpc.sepolia.mantle.xyz");
+      const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
       const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
       const isVerified = await contract.hasPassed(userAddress);
       if (isVerified) {
@@ -275,11 +273,11 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
               <div className="bg-white/5 border-[3px] border-white/10 rounded-[30px] p-6 space-y-4 text-left relative overflow-hidden group">
                 <div className="space-y-1">
                    <label className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.1em]">Subject Name</label>
-                   <p className="text-white font-black text-xl italic tracking-tight font-chunky">ALICE SMITH</p>
+                   <p className="text-white font-black text-xl italic tracking-tight font-chunky">EDWINA HON KAI XIN</p>
                 </div>
                 <div className="space-y-1">
-                   <label className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.1em]">Registry Code</label>
-                   <p className="text-[#ff00ff] font-black text-xl font-mono">MNT-742-998</p>
+                   <label className="text-zinc-500 font-black text-[9px] uppercase tracking-[0.1em]">Identification Number</label>
+                   <p className="text-[#ff00ff] font-black text-xl font-mono">040116-XX-XXXX</p>
                 </div>
               </div>
 

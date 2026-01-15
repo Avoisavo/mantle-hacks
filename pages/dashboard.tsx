@@ -163,7 +163,7 @@ export default function Dashboard() {
       if (!targetAddress) return;
       try {
         const { ethers } = await import('ethers');
-        const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+        const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
         const abi = ["function hasPassed(address user) external view returns (bool)"];
         const contract = new ethers.Contract("0x22F3Cd2Cf4C38453939f04a02fF6b15Aa237ef86", abi, provider);
         const passed = await contract.hasPassed(targetAddress);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ethers, JsonRpcProvider, Contract, formatEther, formatUnits } from 'ethers';
+import { ethers } from 'ethers';
 import { MNT_TOKEN_ADDRESS, L1_MNT_TOKEN_ADDRESS } from '@/utils/address';
 
 // ERC20 ABI for Balance
@@ -36,11 +36,6 @@ export function useMntBalance({ address, chainId }: UseMntBalanceProps) {
                     isNative = true;
                 } else if (chainId === 11155111) {
                     // Sepolia (L1) - ERC20 MNT
-                    providerUrl = 'https://rpc.sepolia.org'; // Or Infura/Alchemy if available, hoping public RPC works
-                    // Fallback to a typically reliable public RPC if that fails? 
-                    // Let's use a known public one or the one user might have configured?
-                    // User didn't specify L1 RPC. I'll use a public one.
-                    // 'https://1rpc.io/sepolia' or 'https://rpc.sepolia.org'
                     providerUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
                     isNative = false;
                     tokenAddress = L1_MNT_TOKEN_ADDRESS;
@@ -48,19 +43,19 @@ export function useMntBalance({ address, chainId }: UseMntBalanceProps) {
                     return;
                 }
 
-                const provider = new JsonRpcProvider(providerUrl);
+                const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
                 if (isNative) {
                     const rawBalance = await provider.getBalance(address);
-                    const formatted = formatEther(rawBalance);
+                    const formatted = ethers.utils.formatEther(rawBalance);
                     setBalance(parseFloat(formatted).toFixed(2));
                 } else {
-                    const contract = new Contract(tokenAddress, ERC20_ABI, provider);
+                    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
                     const [rawBalance, decimals] = await Promise.all([
                         contract.balanceOf(address),
                         contract.decimals()
                     ]);
-                    const formatted = formatUnits(rawBalance, decimals);
+                    const formatted = ethers.utils.formatUnits(rawBalance, decimals);
                     setBalance(parseFloat(formatted).toFixed(2));
                 }
 
