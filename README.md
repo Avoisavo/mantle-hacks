@@ -53,10 +53,6 @@ The blockchain layer consists of multiple smart contracts deployed on Mantle Sep
 - **Account Abstraction**: Alchemy AA SDK (@alchemy/aa-accounts, @alchemy/aa-core)
 - **Bridge**: Mantle SDK (@mantleio/sdk)
 
-### Authentication
-- **Social Login**: NextAuth.js 4.24.13
-- **OAuth Provider**: Google OAuth 2.0
-- **Session Management**: JWT-based sessions
 
 ### Backend & Infrastructure
 - **API**: Next.js API Routes
@@ -73,7 +69,6 @@ The blockchain layer consists of multiple smart contracts deployed on Mantle Sep
 ### Networks
 - **L1**: Ethereum Sepolia (Chain ID: 11155111)
 - **L2**: Mantle Sepolia Testnet (Chain ID: 5003)
-
 
 
 ## Deployment Guide
