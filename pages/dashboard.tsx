@@ -115,14 +115,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAccountData = async () => {
-      if (!session?.user?.email && !connectedWallet) return;
+      // For Web3 wallet login, just use wallet address directly (no smart account needed)
+      if (connectedWallet && !session?.user?.email) {
+        const balanceRes = await fetch(`/api/account/balance?address=${connectedWallet}`);
+        const balanceData = await balanceRes.json();
+        setAccountData({
+          accountAddress: connectedWallet,
+          ownerAddress: connectedWallet,
+          exists: true,
+          balance: balanceData.success ? balanceData.data.balanceInMNT : '0'
+        });
+        setLoading(false);
+        return;
+      }
+
+      // For email login, use smart account system
+      if (!session?.user?.email) return;
       try {
         setLoading(true);
-        const emailOrAddress = session?.user?.email || connectedWallet || "";
         const response = await fetch("/api/account/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: emailOrAddress }),
+          body: JSON.stringify({ email: session.user.email }),
         });
         const data = await response.json();
         if (data.success) {

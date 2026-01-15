@@ -5,8 +5,6 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
     TOWN_TOPUP_NATIVE_ADDRESS,
     TOWN_TOKEN_NATIVE_ADDRESS,
-    TOWN_TOPUP_MANTLE_ADDRESS,
-    TOWN_TOKEN_MANTLE_ADDRESS,
     MNT_TOKEN_ADDRESS,
     MY_NFT_ADDRESS
 } from "@/utils/address";
@@ -455,8 +453,8 @@ export default function TestTopUpMantle() {
                                 fontSize: "11px",
                                 color: "#666",
                             }}>
-                                <p style={{ marginBottom: "5px" }}>TownTopUp: {TOWN_TOPUP_MANTLE_ADDRESS}</p>
-                                <p style={{ marginBottom: "5px" }}>TownToken: {TOWN_TOKEN_MANTLE_ADDRESS}</p>
+                                <p style={{ marginBottom: "5px" }}>TownTopUp: {TOWN_TOPUP_NATIVE_ADDRESS}</p>
+                                <p style={{ marginBottom: "5px" }}>TownToken: {TOWN_TOKEN_NATIVE_ADDRESS}</p>
                                 <p>MNT Token: {MNT_TOKEN_ADDRESS}</p>
                             </div>
                         </>
