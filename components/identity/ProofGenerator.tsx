@@ -27,7 +27,7 @@ export default function ProofGenerator({ onComplete, userAddress, isSmartAccount
   const checkStatus = useCallback(async () => {
     if (!userAddress || !KYC_REGISTRY_ADDRESS) return false;
     try {
-      const provider = new ethers.providers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
+      const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.mantle.xyz");
       const contract = new ethers.Contract(KYC_REGISTRY_ADDRESS, KYC_REGISTRY_ABI, provider);
       const isVerified = await contract.hasPassed(userAddress);
       if (isVerified) {
