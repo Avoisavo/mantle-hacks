@@ -17,12 +17,12 @@ async function main() {
     const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
     if (!privateKey) throw new Error("DEPLOYER_PRIVATE_KEY not set in .env.local");
 
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
+    const provider = new ethers.providers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
     const wallet = new ethers.Wallet(privateKey, provider);
 
     console.log(`Deployer: ${wallet.address}`);
     const balance = await provider.getBalance(wallet.address);
-    console.log(`Balance: ${ethers.formatEther(balance)} MNT\n`);
+    console.log(`Balance: ${ethers.utils.formatEther(balance)} MNT\n`);
 
     // 1. Deploy the Contract
     // Load artifact
@@ -32,8 +32,8 @@ async function main() {
 
     console.log("Deploying RealWorldAssets contract...");
     const contract = await factory.deploy("RealWorldAssets", "RWA");
-    await contract.waitForDeployment();
-    const contractAddress = await contract.getAddress();
+    await contract.deployed();
+    const contractAddress = contract.address;
     console.log("✅ RealWorldAssets deployed to:", contractAddress);
 
     // 2. Define Assets

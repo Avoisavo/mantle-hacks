@@ -15,7 +15,8 @@ interface TournamentRibbonProps {
 export const TournamentRibbon: React.FC<TournamentRibbonProps> = ({ players, currentPlayerIndex, prizePot }) => {
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const { data: session } = useSession();
-    const { address: connectedWallet, disconnect } = useAccount();
+    const { address: connectedWallet } = useAccount();
+    const { disconnect } = useDisconnect();
     const router = useRouter();
     const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -81,8 +82,8 @@ export const TournamentRibbon: React.FC<TournamentRibbonProps> = ({ players, cur
                                         className="w-full h-full rounded-[14px] border-2 border-[#26D07C] object-cover"
                                     />
                                 ) : (
-                                    <div className={`w-full h-full rounded-[14px] flex items-center justify-center border-[2px] ${human.balance === maxBalance ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-[#26D07C] bg-[#26D07C]/10'} shadow-inner`}>
-                                        <AvatarIcon name={human.avatar} size={24} className={human.balance === maxBalance ? 'text-[#FFD700]' : 'text-[#26D07C]'} />
+                                    <div className={`w-full h-full rounded-[14px] flex items-center justify-center border-[2px] ${human?.balance === maxBalance ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-[#26D07C] bg-[#26D07C]/10'} shadow-inner`}>
+                                        <AvatarIcon name={human?.avatar || 'default'} size={24} className={human?.balance === maxBalance ? 'text-[#FFD700]' : 'text-[#26D07C]'} />
                                     </div>
                                 )}
                                 {/* Online Dot */}

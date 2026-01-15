@@ -180,6 +180,7 @@ export default function SwapTokenPage() {
                             rarity={nft.rarity}
                             color={nft.color}
                             glowColor={nft.glowColor}
+                            contractAddress="0x0000000000000000000000000000000000000000"
                         />
                     ))}
                 </div>

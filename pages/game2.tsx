@@ -185,7 +185,7 @@ export default function Game2Page() {
     const publicClient = usePublicClient();
     const [isInternalProcessing, setIsInternalProcessing] = useState(false);
     const isProcessingTx = isInternalProcessing;
-    
+
     // Get balances for the payment menu
     const { balance: townBalanceFormatted } = useTownBalance(connectedWallet);
     const { balance: mntBalanceFormatted } = useMntBalance({ address: connectedWallet, chainId: 5003 });
@@ -932,7 +932,7 @@ export default function Game2Page() {
                 table.position.set(0, -5, 0);
                 table.scale.set(11, 11, 11);
                 table.traverse((child) => {
-                    if (child.isMesh) {
+                    if (child instanceof THREE.Mesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
@@ -1034,7 +1034,7 @@ export default function Game2Page() {
                 city.position.set(0, 10.56, 0);
                 city.scale.set(0.077, 0.08, 0.0615);
                 city.traverse((child) => {
-                    if (child.isMesh) {
+                    if (child instanceof THREE.Mesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
                         // Make materials transparent so we can fade them
@@ -1588,7 +1588,7 @@ export default function Game2Page() {
 
                 // Apply opacity to all city materials
                 cityRef.current.traverse((child) => {
-                    if (child.isMesh) {
+                    if (child instanceof THREE.Mesh) {
                         const mesh = child as THREE.Mesh;
                         if (mesh.material) {
                             if (Array.isArray(mesh.material)) {
@@ -2785,172 +2785,172 @@ export default function Game2Page() {
                                 <span>END TURN</span>
                             </button>
 
-                        <button
-                            onClick={() => {
-                                setShowPaymentOptions(!showPaymentOptions);
-                            }}
-                            className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center justify-between gap-3"
-                            style={{
-                                background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
-                                border: `2px solid ${showPaymentOptions ? '#ffaa00' : '#ffd700'}`,
-                                fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
-                                color: '#ffd700',
-                                fontSize: '1.25rem',
-                                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <span style={{ fontSize: '1.5rem' }}>💵</span>
-                                <span>PAY {currentTilePrice} TOWN</span>
-                            </div>
-                            <span className={`transition-transform duration-300 ${showPaymentOptions ? 'rotate-180' : ''}`} style={{ fontSize: '0.8rem' }}>▼</span>
-                        </button>
+                            <button
+                                onClick={() => {
+                                    setShowPaymentOptions(!showPaymentOptions);
+                                }}
+                                className="w-[60%] relative group text-left font-bold py-3 px-5 rounded-lg transition-all duration-300 transform hover:scale-102 active:scale-98 flex items-center justify-between gap-3"
+                                style={{
+                                    background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%)',
+                                    border: `2px solid ${showPaymentOptions ? '#ffaa00' : '#ffd700'}`,
+                                    fontFamily: '"Luckiest Guy", cursive, fantasy, sans-serif',
+                                    color: '#ffd700',
+                                    fontSize: '1.25rem',
+                                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span style={{ fontSize: '1.5rem' }}>💵</span>
+                                    <span>PAY {currentTilePrice} TOWN</span>
+                                </div>
+                                <span className={`transition-transform duration-300 ${showPaymentOptions ? 'rotate-180' : ''}`} style={{ fontSize: '0.8rem' }}>▼</span>
+                            </button>
 
-                        {/* Payment Options Sub-menu */}
-                        {showPaymentOptions && (
-                            <div className="w-[65%] flex flex-col gap-3 mt-[-10px] items-end border-r-2 border-dashed border-yellow-500/30 pr-4 py-2 bg-black/20 backdrop-blur-sm rounded-l-lg">
-                                {!connectedWallet ? (
-                                    <div className="flex flex-col items-center gap-2 p-2 w-full">
-                                        <p className="text-[10px] text-yellow-500 font-bold uppercase text-center">Wallet connection needed for payment</p>
-                                        <ConnectButton.Custom>
-                                            {({ account, chain, openConnectModal, mounted }) => {
-                                                return (
-                                                    <button
-                                                        onClick={openConnectModal}
-                                                        className="px-4 py-2 bg-yellow-500 text-black rounded font-black text-xs uppercase hover:bg-yellow-400 transition-colors shadow-[0_4px_0_#92400e] active:translate-y-1 active:shadow-none"
-                                                        style={{ fontFamily: '"Rajdhani", sans-serif' }}
-                                                    >
-                                                        Connect Wallet
-                                                    </button>
-                                                );
-                                            }}
-                                        </ConnectButton.Custom>
-                                    </div>
-                                ) : chainId !== 5003 ? (
-                                    <div className="flex flex-col items-center gap-2 p-2 w-full">
-                                        <p className="text-[10px] text-red-500 font-bold uppercase text-center">Wrong Network</p>
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    await switchChainAsync({ chainId: 5003 });
-                                                } catch (e) {
-                                                    console.error("Failed to switch chain:", e);
-                                                }
-                                            }}
-                                            className="px-4 py-2 bg-red-500 text-white rounded font-black text-xs uppercase hover:bg-red-600 transition-colors shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none"
-                                            style={{ fontFamily: '"Rajdhani", sans-serif' }}
-                                        >
-                                            Switch to Mantle Sepolia
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex flex-col items-end gap-1 mb-1 px-2 border-b border-yellow-500/10 w-full pb-2">
-                                            <p className="text-[10px] text-cyan-400/80 font-mono">WALLET: {connectedWallet?.slice(0, 6)}...{connectedWallet?.slice(-4)}</p>
-                                            <div className="flex gap-3">
-                                                <p className="text-[10px] text-yellow-500 font-bold uppercase">{townBalanceFormatted} TOWN</p>
-                                                <p className="text-[10px] text-emerald-400 font-bold uppercase">{mntBalanceFormatted} MNT</p>
-                                            </div>
+                            {/* Payment Options Sub-menu */}
+                            {showPaymentOptions && (
+                                <div className="w-[65%] flex flex-col gap-3 mt-[-10px] items-end border-r-2 border-dashed border-yellow-500/30 pr-4 py-2 bg-black/20 backdrop-blur-sm rounded-l-lg">
+                                    {!connectedWallet ? (
+                                        <div className="flex flex-col items-center gap-2 p-2 w-full">
+                                            <p className="text-[10px] text-yellow-500 font-bold uppercase text-center">Wallet connection needed for payment</p>
+                                            <ConnectButton.Custom>
+                                                {({ account, chain, openConnectModal, mounted }) => {
+                                                    return (
+                                                        <button
+                                                            onClick={openConnectModal}
+                                                            className="px-4 py-2 bg-yellow-500 text-black rounded font-black text-xs uppercase hover:bg-yellow-400 transition-colors shadow-[0_4px_0_#92400e] active:translate-y-1 active:shadow-none"
+                                                            style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                                        >
+                                                            Connect Wallet
+                                                        </button>
+                                                    );
+                                                }}
+                                            </ConnectButton.Custom>
                                         </div>
-
-                                        <button
-                                            disabled={isProcessingTx}
-                                            onClick={async () => {
-                                                console.log(`DEDUCT ${currentTilePrice} TOWN Clicked`);
-                                                if (!connectedWallet) {
-                                                    alert("Wallet not connected! Please connect your wallet first.");
-                                                    return;
-                                                }
-                                                if (chainId !== 5003) {
-                                                    console.log("Current Chain ID:", chainId, "Target: 5003");
-                                                    alert("Wrong network! Please switch to Mantle Sepolia Testnet.");
+                                    ) : chainId !== 5003 ? (
+                                        <div className="flex flex-col items-center gap-2 p-2 w-full">
+                                            <p className="text-[10px] text-red-500 font-bold uppercase text-center">Wrong Network</p>
+                                            <button
+                                                onClick={async () => {
                                                     try {
                                                         await switchChainAsync({ chainId: 5003 });
                                                     } catch (e) {
-                                                        console.error("Manual switch failed", e);
+                                                        console.error("Failed to switch chain:", e);
                                                     }
-                                                    return;
-                                                }
-                                                
-                                                try {
-                                                    setIsInternalProcessing(true);
-                                                    console.log(`1. Starting Approval for ${currentTilePrice} TOWN...`);
-                                                    const approveHash = await writeContractAsync({
-                                                        address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
-                                                        abi: TownTokenABI,
-                                                        functionName: 'approve',
-                                                        args: [TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`, parseEther(currentTilePrice.toString())],
-                                                    });
-                                                    
-                                                    console.log("Approval TX sent:", approveHash);
-                                                    if (publicClient) {
-                                                        console.log("Waiting for approval confirmation...");
-                                                        await publicClient.waitForTransactionReceipt({ hash: approveHash });
-                                                        console.log("Approval confirmed!");
+                                                }}
+                                                className="px-4 py-2 bg-red-500 text-white rounded font-black text-xs uppercase hover:bg-red-600 transition-colors shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none"
+                                                style={{ fontFamily: '"Rajdhani", sans-serif' }}
+                                            >
+                                                Switch to Mantle Sepolia
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex flex-col items-end gap-1 mb-1 px-2 border-b border-yellow-500/10 w-full pb-2">
+                                                <p className="text-[10px] text-cyan-400/80 font-mono">WALLET: {connectedWallet?.slice(0, 6)}...{connectedWallet?.slice(-4)}</p>
+                                                <div className="flex gap-3">
+                                                    <p className="text-[10px] text-yellow-500 font-bold uppercase">{townBalanceFormatted} TOWN</p>
+                                                    <p className="text-[10px] text-emerald-400 font-bold uppercase">{mntBalanceFormatted} MNT</p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                disabled={isProcessingTx}
+                                                onClick={async () => {
+                                                    console.log(`DEDUCT ${currentTilePrice} TOWN Clicked`);
+                                                    if (!connectedWallet) {
+                                                        alert("Wallet not connected! Please connect your wallet first.");
+                                                        return;
                                                     }
-
-                                                    // 2. Deduct
-                                                    const functionName = currentTilePrice === 10 ? 'deduct10' : 'deduct20';
-                                                    console.log(`Step 2: Calling ${functionName}...`);
-                                                    const deductHash = await writeContractAsync({
-                                                        address: TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`,
-                                                        abi: TownDeductABI,
-                                                        functionName: functionName,
-                                                    });
-
-                                                    console.log("Deduction TX sent:", deductHash);
-                                                    if (publicClient) {
-                                                        console.log("Waiting for deduction confirmation...");
-                                                        await publicClient.waitForTransactionReceipt({ hash: deductHash });
-                                                        console.log("Deduction confirmed!");
-                                                    }
-
-                                                    // 3. Game logic
-                                                    console.log("Triggering game event: placePaper");
-                                                    const currentPlayerIndex = currentPlayerIndexRef.current;
-                                                    const event = new CustomEvent('placePaper', {
-                                                        detail: {
-                                                            tileIndex: currentTileRef.current,
-                                                            playerImage: players[currentPlayerIndex].image
+                                                    if (chainId !== 5003) {
+                                                        console.log("Current Chain ID:", chainId, "Target: 5003");
+                                                        alert("Wrong network! Please switch to Mantle Sepolia Testnet.");
+                                                        try {
+                                                            await switchChainAsync({ chainId: 5003 });
+                                                        } catch (e) {
+                                                            console.error("Manual switch failed", e);
                                                         }
-                                                    });
-                                                    window.dispatchEvent(event);
-                                                    setShowTileOverlay(false);
-                                                    setShowDiceResult(false);
-                                                    alert(`Payment of ${currentTilePrice} TOWN successful! Asset acquired.`);
+                                                        return;
+                                                    }
 
-                                                    // Switch to next player after paper animation completes
-                                                    setTimeout(() => {
-                                                        const switchEvent = new CustomEvent('switchToNextPlayer');
-                                                        window.dispatchEvent(switchEvent);
-                                                    }, 1200); // 800ms delay + 400ms animation duration
-                                                } catch (error) {
-                                                    console.error("Payment flow failed:", error);
-                                                    alert("Transaction failed: " + (error as any).message);
-                                                } finally {
-                                                    setIsInternalProcessing(false);
-                                                }
-                                            }}
-                                            className="w-full relative group text-left font-bold py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between border-2 border-yellow-500 shadow-[0_0_15px_rgba(255,215,0,0.2)]"
-                                            style={{
-                                                fontFamily: '"Luckiest Guy", cursive',
-                                                color: '#000',
-                                                background: 'linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)',
-                                                letterSpacing: '0.05em'
-                                            }}
-                                        >
-                                            <span>{isProcessingTx ? "PROCESSING..." : `CONFIRM ${currentTilePrice} TOWN`}</span>
-                                            {isProcessingTx ? (
-                                                <RefreshCw size={18} className="animate-spin text-black" />
-                                            ) : (
-                                                <CheckCircle2 size={18} className="text-black" />
-                                            )}
-                                        </button>
-                                        <p className="text-[10px] text-yellow-500/60 font-mono text-center w-full mt-1 italic">Premium Asset: Secure with Town Tokens</p>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                                                    try {
+                                                        setIsInternalProcessing(true);
+                                                        console.log(`1. Starting Approval for ${currentTilePrice} TOWN...`);
+                                                        const approveHash = await writeContractAsync({
+                                                            address: TOWN_TOKEN_NATIVE_ADDRESS as `0x${string}`,
+                                                            abi: TownTokenABI,
+                                                            functionName: 'approve',
+                                                            args: [TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`, parseEther(currentTilePrice.toString())],
+                                                        });
+
+                                                        console.log("Approval TX sent:", approveHash);
+                                                        if (publicClient) {
+                                                            console.log("Waiting for approval confirmation...");
+                                                            await publicClient.waitForTransactionReceipt({ hash: approveHash });
+                                                            console.log("Approval confirmed!");
+                                                        }
+
+                                                        // 2. Deduct
+                                                        const functionName = currentTilePrice === 10 ? 'deduct10' : 'deduct20';
+                                                        console.log(`Step 2: Calling ${functionName}...`);
+                                                        const deductHash = await writeContractAsync({
+                                                            address: TOWN_DEDUCT_NATIVE_ADDRESS as `0x${string}`,
+                                                            abi: TownDeductABI,
+                                                            functionName: functionName,
+                                                        });
+
+                                                        console.log("Deduction TX sent:", deductHash);
+                                                        if (publicClient) {
+                                                            console.log("Waiting for deduction confirmation...");
+                                                            await publicClient.waitForTransactionReceipt({ hash: deductHash });
+                                                            console.log("Deduction confirmed!");
+                                                        }
+
+                                                        // 3. Game logic
+                                                        console.log("Triggering game event: placePaper");
+                                                        const currentPlayerIndex = currentPlayerIndexRef.current;
+                                                        const event = new CustomEvent('placePaper', {
+                                                            detail: {
+                                                                tileIndex: currentTileRef.current,
+                                                                playerImage: players[currentPlayerIndex].image
+                                                            }
+                                                        });
+                                                        window.dispatchEvent(event);
+                                                        setShowTileOverlay(false);
+                                                        setShowDiceResult(false);
+                                                        alert(`Payment of ${currentTilePrice} TOWN successful! Asset acquired.`);
+
+                                                        // Switch to next player after paper animation completes
+                                                        setTimeout(() => {
+                                                            const switchEvent = new CustomEvent('switchToNextPlayer');
+                                                            window.dispatchEvent(switchEvent);
+                                                        }, 1200); // 800ms delay + 400ms animation duration
+                                                    } catch (error) {
+                                                        console.error("Payment flow failed:", error);
+                                                        alert("Transaction failed: " + (error as any).message);
+                                                    } finally {
+                                                        setIsInternalProcessing(false);
+                                                    }
+                                                }}
+                                                className="w-full relative group text-left font-bold py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between border-2 border-yellow-500 shadow-[0_0_15px_rgba(255,215,0,0.2)]"
+                                                style={{
+                                                    fontFamily: '"Luckiest Guy", cursive',
+                                                    color: '#000',
+                                                    background: 'linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)',
+                                                    letterSpacing: '0.05em'
+                                                }}
+                                            >
+                                                <span>{isProcessingTx ? "PROCESSING..." : `CONFIRM ${currentTilePrice} TOWN`}</span>
+                                                {isProcessingTx ? (
+                                                    <RefreshCw size={18} className="animate-spin text-black" />
+                                                ) : (
+                                                    <CheckCircle2 size={18} className="text-black" />
+                                                )}
+                                            </button>
+                                            <p className="text-[10px] text-yellow-500/60 font-mono text-center w-full mt-1 italic">Premium Asset: Secure with Town Tokens</p>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Hidden - TRADE button */}
                             {/* <button
@@ -2993,11 +2993,10 @@ export default function Game2Page() {
                             <div className="absolute top-1/2 right-4 -translate-y-1/2 z-10 flex flex-col gap-2">
                                 <button
                                     onClick={() => setRightViewMode('model')}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                        rightViewMode === 'model'
-                                            ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/50 scale-110'
-                                            : 'bg-black/50 text-cyan-400 border border-cyan-500/50 hover:bg-black/70'
-                                    }`}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${rightViewMode === 'model'
+                                        ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/50 scale-110'
+                                        : 'bg-black/50 text-cyan-400 border border-cyan-500/50 hover:bg-black/70'
+                                        }`}
                                     title="View 3D Model"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3011,11 +3010,10 @@ export default function Game2Page() {
                                 </button>
                                 <button
                                     onClick={() => setRightViewMode('nft')}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                                        rightViewMode === 'nft'
-                                            ? 'bg-purple-500 text-black shadow-lg shadow-purple-500/50 scale-110'
-                                            : 'bg-black/50 text-purple-400 border border-purple-500/50 hover:bg-black/70'
-                                    }`}
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${rightViewMode === 'nft'
+                                        ? 'bg-purple-500 text-black shadow-lg shadow-purple-500/50 scale-110'
+                                        : 'bg-black/50 text-purple-400 border border-purple-500/50 hover:bg-black/70'
+                                        }`}
                                     title="View NFT Card"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

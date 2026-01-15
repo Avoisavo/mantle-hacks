@@ -58,7 +58,7 @@ export default function TestTopUpMantle() {
 
         // Check if user has enough native MNT
         const requiredAmount = parseEther(mntAmount);
-        const currentBalance = nativeBalance?.value || 0n;
+        const currentBalance = nativeBalance?.value || BigInt(0);
 
         if (currentBalance < requiredAmount) {
             setStatus(`❌ Error: Insufficient MNT balance. You need ${mntAmount} MNT but only have ${formatEther(currentBalance)}`);

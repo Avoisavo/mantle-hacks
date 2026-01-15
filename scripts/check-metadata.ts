@@ -16,7 +16,7 @@ const CONTRACTS = [
 
 async function main() {
     const CONTRACT_ADDRESS = "0x38b362B18c37243C92aa8A0D4e2127a8dD0EDa1f";
-    const provider = new ethers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
+    const provider = new ethers.providers.JsonRpcProvider(RPC, { chainId: CHAIN_ID, name: "mantle-sepolia" });
 
     // Load artifact
     const artifactPath = "./artifacts/contracts/mynft.sol/MyNFT.json";
