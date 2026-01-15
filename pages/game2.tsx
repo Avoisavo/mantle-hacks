@@ -242,9 +242,6 @@ export default function Game2Page() {
     const cameraTransitionEndTargetRef = useRef<THREE.Vector3 | null>(null);
 
     // Account state
-    const { data: session } = useSession();
-    const { address: connectedWallet } = useAccount();
-    const { disconnect } = useDisconnect();
     const router = useRouter();
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const [isVerified, setIsVerified] = useState<boolean | null>(null);
